@@ -1,0 +1,14 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import ts from 'typescript';
+const exports={};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('lib/planning.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{exports,Intl,Date,Set});
+const {parseRule,parseSteps}=exports;
+const rule={frequency:'weekly',interval:2,weekdays:[1,3,5],start:'2026-09-28',until:null,count:null};
+test('custom weekly recurrence keeps selected days and interval',()=>{const parsed=parseRule(rule);assert.equal(parsed.interval,2);assert.equal(parsed.weekdays.join(','),'1,3,5');});
+test('rejects impossible dates and incompatible ends',()=>{assert.throws(()=>parseRule({...rule,start:'2026-02-30'}));assert.throws(()=>parseRule({...rule,until:'2026-09-27'}));assert.throws(()=>parseRule({...rule,until:'2026-10-01',count:2}));});
+test('weekly recurrence requires valid weekdays and positive integer interval',()=>{for(const patch of [{weekdays:[]},{weekdays:[7]},{interval:0},{interval:1.5}])assert.throws(()=>parseRule({...rule,...patch}));});
+test('subtasks preserve partial progress and actual workout values',()=>{const result=parseSteps([{id:'a',title:' Esteira ',target:'3 km',actual:'2 km',done:false},{id:'b',title:'Abdominal',target:'3 × 15',actual:'3 × 15',done:true}]);assert.equal(result[0].title,'Esteira');assert.equal(result[0].actual,'2 km');assert.equal(result[1].done,true);});
+test('rejects duplicate subtask identifiers and malformed exercise values',()=>{const step={id:'a',title:'Braços',target:'3 × 12',actual:'',done:false};assert.throws(()=>parseSteps([step,step]));assert.throws(()=>parseSteps([{...step,done:'yes'}]));assert.throws(()=>parseSteps([{...step,title:''}]));});

@@ -1,0 +1,43 @@
+app/achievements/page.tsx
+app/actions.ts
+app/auth/callback/route.ts
+app/auth/confirm/route.ts
+app/auth/error/page.tsx
+app/auth/forgot-password/page.tsx
+app/auth/login/page.tsx
+app/auth/sign-up-success/page.tsx
+app/auth/sign-up/page.tsx
+app/auth/update-password/page.tsx
+app/bosses/page.tsx
+app/error.tsx
+app/focus/page.tsx
+app/page.tsx
+app/protected/page.tsx
+app/shop/page.tsx
+app/tasks/page.tsx
+components/auth-form.tsx
+components/boss-card.tsx
+components/task-card.tsx
+lib/query.ts
+lib/supabase/client.ts
+lib/supabase/config.ts
+lib/supabase/proxy.ts
+lib/supabase/redirect.ts
+lib/supabase/server.ts
+lib/types.ts
+Backup dos arquivos originais (sem .env.local): /tmp/alyquest-backup-20260927215710
+app/globals.css
+app/protected/page.tsx
+app/shop/page.tsx
+app/tasks/page.tsx
+components/action-form.tsx
+components/pomodoro.tsx
+components/task-card.tsx
+eslint.config.mjs
+lib/game.ts
+tailwind.config.ts
+Backup adicional: /tmp/alyquest-backup-20260927215911
+tests/audit.test.mjs
+package.json
+AGENTS.md (gerado pelo Next.js)
+CLAUDE.md (gerado pelo Next.js)
