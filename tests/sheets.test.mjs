@@ -1,0 +1,10 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';import vm from 'node:vm';import ts from 'typescript';
+const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('lib/sheet-import.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{exports,Date,Set});
+const {sheetRows,parseCSV}=exports;
+const header='id_tarefa,descricao,status,responsavel,prazo,projeto\n';
+test('CSV preserves quoted commas, newlines and escaped quotes',()=>{assert.equal(parseCSV('a,b\n1,"um, dois\n""três"""')[1][1],'um, dois\n"três"');assert.throws(()=>parseCSV('a,"unfinished'));});
+test('import filters exact normalized assignee and tracks completed source without marking active',()=>{const rows=sheetRows(header+'1,"Linha, um",Pendente,Alysson Campos,24/09/2026,Projeto\n2,Outra,Pendente,Outra pessoa,,Projeto\n3,Feita,Concluído,Alysson Campos,,Projeto',' alysson campos ');assert.equal(rows.length,2);assert.equal(rows[0].due,'2026-09-24');assert.equal(rows[0].active,true);assert.equal(rows[1].active,false);});
+test('import deduplicates stable external IDs and rejects changed columns',()=>{assert.equal(sheetRows(header+'1,Teste,Pendente,Alysson Campos,,P\n1,Teste,Pendente,Alysson Campos,,P','Alysson Campos').length,1);assert.throws(()=>sheetRows('id,title\n1,X','Alysson Campos'));});
+test('invalid deadlines are omitted rather than normalized to another date',()=>{assert.equal(sheetRows(header+'1,Teste,Pendente,Alysson Campos,31/02/2026,P','Alysson Campos')[0].due,null);});

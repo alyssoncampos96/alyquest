@@ -1,4 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-:root{color-scheme:dark}html{background:#080a13}body{min-height:100vh;background:radial-gradient(700px 360px at 50% -100px,rgba(91,33,182,.28),transparent 65%),#080a13}button,a,input,select{-webkit-tap-highlight-color:transparent}input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1)}
+:root{color-scheme:dark}html{background:#080a13}body{min-height:100vh;background:radial-gradient(700px 360px at 50% -100px,rgba(91,33,182,.28),transparent 65%),#080a13}button,a,input,select{-webkit-tap-highlight-color:transparent}input[type="date"]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
+
+body { padding-top: env(safe-area-inset-top, 0px); }
+input[type="date"] { min-width:0; color-scheme:dark; }

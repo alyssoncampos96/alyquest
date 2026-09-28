@@ -1,0 +1,83 @@
+# 50 sugestões de conquistas
+
+Propostas, sem alterar medalhas ou recompensas atuais.
+
+## Missões e organização
+
+- **Na metade do caminho** — Concluir 25 missões.
+- **Cinquenta vitórias** — Concluir 50 missões.
+- **Clube dos cem** — Concluir 100 missões.
+- **Passo a passo** — Concluir todas as etapas de uma missão.
+- **Quebra-cabeça resolvido** — Concluir 10 missões com todas as etapas marcadas.
+
+## Planejamento
+
+- **Primeiro compromisso** — Criar a primeira tarefa com prazo.
+- **Semana desenhada** — Planejar tarefas para cinco dias distintos da mesma semana.
+- **Antes do prazo** — Concluir uma tarefa antes da data prevista.
+- **Agenda em dia** — Concluir 10 tarefas até seus prazos.
+- **Revisão consciente** — Revisar e ajustar o planejamento de uma semana.
+
+## Recorrência
+
+- **Um novo hábito** — Criar a primeira série recorrente.
+- **Ritmo próprio** — Concluir três ocorrências da mesma série.
+- **Hábito em construção** — Concluir 10 ocorrências da mesma série.
+- **Rotina consolidada** — Concluir 30 ocorrências da mesma série.
+- **De volta ao jogo** — Concluir uma ocorrência após uma pausa na série.
+
+## Foco
+
+- **Foco dez** — Concluir 10 fases de foco.
+- **Vinte e cinco mergulhos** — Concluir 25 fases de foco.
+- **Cinquenta mergulhos** — Concluir 50 fases de foco.
+- **Uma hora investida** — Acumular 60 minutos de foco concluído.
+- **Dez horas investidas** — Acumular 600 minutos de foco concluído.
+
+## Pausas e intenção
+
+- **Respirar também conta** — Concluir o primeiro descanso após um foco.
+- **Pausa respeitada** — Concluir 10 descansos após o foco.
+- **Ciclo completo** — Concluir foco e descanso da mesma sessão.
+- **Intenção definida** — Concluir um foco com uma missão vinculada.
+- **Além da lista** — Concluir um foco com Outra atividade descrita.
+
+## Treinos
+
+- **Primeiro movimento** — Concluir o primeiro treino.
+- **Cinco encontros** — Concluir cinco treinos em datas distintas.
+- **Vinte sessões** — Concluir 20 treinos.
+- **Meu repertório** — Criar o primeiro módulo de treino próprio.
+- **Biblioteca pessoal** — Criar cinco módulos de treino próprios.
+
+## Treinos modulares
+
+- **Combinação do dia** — Montar um treino com dois módulos diferentes.
+- **Treino planejado** — Agendar um treino para uma data futura.
+- **Semana flexível** — Planejar três sessões na visão de sete dias.
+- **Registro útil** — Salvar o realizado ou uma observação em um exercício.
+- **Evolução documentada** — Registrar o realizado em 10 sessões distintas.
+
+## Chefes e metas
+
+- **Uma meta com nome** — Criar o primeiro chefe.
+- **Primeiro vínculo** — Vincular uma missão a um chefe.
+- **Plano de batalha** — Vincular cinco missões ao mesmo chefe.
+- **Três grandes vitórias** — Derrotar três chefes.
+- **Dez grandes vitórias** — Derrotar 10 chefes.
+
+## Áreas da vida
+
+- **Espaço pessoal** — Concluir 10 missões de Pessoal.
+- **Trabalho em movimento** — Concluir 10 missões de Trabalho.
+- **Aprendizado contínuo** — Concluir 10 missões de Faculdade.
+- **Finanças organizadas** — Concluir 10 missões de Financeiro.
+- **Cuidado em ação** — Concluir 10 missões de Saúde.
+
+## Exploração
+
+- **Horizontes variados** — Concluir uma missão em cada uma das cinco categorias.
+- **Duas frentes** — Concluir missões de duas categorias distintas na mesma semana.
+- **Ponte com o trabalho** — Importar a primeira tarefa da planilha.
+- **Trabalho integrado** — Concluir 10 tarefas importadas da planilha.
+- **Meu equipamento** — Equipar o primeiro item comprado na loja.

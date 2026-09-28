@@ -1,0 +1,9 @@
+"use client";
+import { useEffect,useState,useTransition } from 'react';
+import { syncSheet } from '@/app/sheet-actions';
+import { sheetId } from '@/lib/sheet-import';
+export function SheetSync(){
+ const [name,setName]=useState('Alysson Campos'),[message,setMessage]=useState(''),[pending,start]=useTransition();
+ useEffect(()=>{const run=()=>{if(document.visibilityState==='visible')void syncSheet().catch(()=>setMessage('A sincronização automática falhou. Tente novamente.'));};run();const id=setInterval(run,300000);return()=>clearInterval(id);},[]);
+ return <details className="mt-5 rounded-2xl border border-slate-700 p-3"><summary className="cursor-pointer text-sm text-violet-300">↻ Tarefas da planilha</summary><p className="mt-3 text-xs text-slate-400">Importa pendentes do responsável informado e verifica novas tarefas a cada 5 minutos enquanto esta tela estiver aberta. Conclusões, edições e recompensas no AlyQuest são preservadas. Não altera a planilha.</p><label className="mt-3 block text-sm">Responsável<input className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" maxLength={100} value={name} onChange={e=>setName(e.target.value)}/></label><button disabled={pending} type="button" className="mt-3 rounded-xl bg-violet-600 px-3 py-2 text-sm font-bold" onClick={()=>start(async()=>{try{const count=await syncSheet(name);setMessage(`${count??0} novas tarefas importadas.`);}catch(e){setMessage(e instanceof Error?e.message:'Falha na importação.');}})}>{pending?'Sincronizando…':'Conectar / sincronizar'}</button><a href={`https://docs.google.com/spreadsheets/d/${sheetId}/edit#gid=1038364522`} target="_blank" rel="noreferrer" className="ml-3 text-sm text-violet-300">Abrir planilha ↗</a>{message&&<p role="status" className="mt-3 text-sm">{message}</p>}</details>;
+}

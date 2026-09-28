@@ -12,10 +12,10 @@ async function invoke(name:string,args:Record<string,unknown>) {
 async function missionData(form:FormData) {
  const title=String(form.get('title')??'').trim(),category=String(form.get('category')??'Pessoal'),priority=String(form.get('priority')??'medium');
  const hours=Number(form.get('estimated_hours')); const kind=String(form.get('kind')??'task');
- if(!title||title.length>200||!categories.includes(category)||!['low','medium','high'].includes(priority)||!Number.isFinite(hours)||hours<=0||hours>1000||!['task','workout'].includes(kind))throw new Error('Confira o título, categoria e duração.');
+ if(!title||title.length>200||!categories.includes(category)||!['low','medium','high'].includes(priority)||!Number.isFinite(hours)||hours<=0||hours>1000||!['single','task','workout'].includes(kind))throw new Error('Confira o título, categoria e duração.');
  const rule=parseRule(JSON.parse(String(form.get('rule')??'null')));
  const due=String(form.get('due_date')??'');if(due&&!/^\d{4}-\d{2}-\d{2}$/.test(due))throw new Error('Prazo inválido.');
- return {p_data:{title,category,priority,estimated_hours:hours,boss_id:form.get('boss_id')||null,due_date:due||null,kind},p_rule:rule};
+ return {p_data:{title,category,priority,estimated_hours:hours,boss_id:form.get('boss_id')||null,due_date:due||null,kind,...(form.has('steps')?{steps:parseSteps(JSON.parse(String(form.get('steps')))).map(s=>({...s,done:false,actual:''}))}:{})},p_rule:rule};
 }
 export async function saveSteps(id:string,steps:unknown) { await invoke('aq_save_steps',{p_task_id:id,p_steps:parseSteps(steps)}); }
 export async function saveModule(id:string|null,name:string,steps:unknown) {
@@ -35,3 +35,5 @@ export async function materializeRoutines() {
 export async function saveMission(id:string|null,form:FormData){await invoke('aq_save_task',{p_task_id:id,...await missionData(form),p_scope:form.get('scope')||'one'});}
 export async function saveRoutine(id:string,form:FormData){await invoke('aq_save_routine',{p_id:id,...await missionData(form)});}
 export async function repeatWorkout(id:string){await invoke('aq_repeat_workout',{p_task_id:id});}
+
+export async function finishFocus(id:string,taskIds:string[],other:string,phase:'focus'|'break',focus:number,rest:number) {return await invoke('aq_complete_focus',{p_session_id:id,p_task_ids:taskIds,p_other:other,p_phase:phase,p_focus_minutes:focus,p_break_minutes:rest}) as string;}

@@ -1,0 +1,32 @@
+begin;
+do $$ begin perform set_config('request.jwt.claim.sub',(select id::text from auth.users order by created_at limit 1),true);end $$;
+set local role authenticated;
+do $$
+declare t uuid; r uuid; sid uuid:=gen_random_uuid(); x numeric;c numeric;n int; failed boolean; payload jsonb; rule jsonb;
+begin
+ select coalesce(sum(amount),0) into x from public.xp_transactions;
+ select coalesce(sum(amount),0) into c from public.coin_transactions;
+ payload:='{"title":"__AQ_TEST__ DOC","category":"Saúde","priority":"medium","estimated_hours":1,"kind":"workout","steps":[{"id":"a","title":"Esteira","target":"3 km","actual":"","done":false}]}'::jsonb;
+ rule:=jsonb_build_object('frequency','daily','interval',1,'weekdays','[1]'::jsonb,'start',(now() at time zone 'America/Sao_Paulo')::date::text,'until',null,'count',7);
+ t:=public.aq_save_task(null,payload,rule,'one');select routine_id into r from public.aq_task_plans where task_id=t;
+ if (select count(*) from public.aq_task_plans where routine_id=r)<>7 then raise exception 'Weekly workout generation failed';end if;
+ if exists(select 1 from public.aq_task_plans where routine_id=r and steps<>payload->'steps') then raise exception 'Module snapshot failed';end if;
+ perform public.aq_materialize();if (select count(*) from public.aq_task_plans where routine_id=r)<>7 then raise exception 'Duplicate occurrence';end if;
+ perform public.aq_complete_focus(sid,array[t],'Estudo','focus',25,5);
+ perform public.aq_complete_focus(sid,array[t],'Estudo','focus',25,5);
+ perform public.aq_complete_focus(sid,array[t],'Estudo','break',25,5);
+ perform public.aq_complete_focus(sid,array[t],'Estudo','break',25,5);
+ if (select coalesce(sum(amount),0) from public.xp_transactions)-x<>2 or (select coalesce(sum(amount),0) from public.coin_transactions)-c<>2 then raise exception 'Focus duplicate rewards';end if;
+ if not exists(select 1 from public.pomodoro_sessions where id=sid and task_ids=array[t] and other_activity='Estudo') then raise exception 'Focus metadata missing';end if;
+ payload:='[{"id":"__AQ_TEST__ sheet","title":"__AQ_TEST__ imported","status":"Pendente","active":true,"due":null,"project":"Test"}]'::jsonb;
+ n:=public.aq_import_sheet('Test',payload);if n<>1 then raise exception 'Import failed';end if;
+ n:=public.aq_import_sheet('Test',payload);if n<>0 then raise exception 'Duplicate import';end if;
+ select task_id into t from public.aq_sheet_links where external_id='__AQ_TEST__ sheet';perform public.complete_task(t);perform public.aq_import_sheet('Test',payload);
+ if not exists(select 1 from public.tasks where id=t and status='completed') then raise exception 'Imported completion overwritten';end if;
+ perform set_config('request.jwt.claim.sub',gen_random_uuid()::text,true);
+ if exists(select 1 from public.aq_sheet_links where task_id=t) then raise exception 'Sheet RLS failed';end if;
+ failed:=false;begin perform public.aq_complete_focus(sid,'{}'::uuid[],'','focus',25,5);exception when others then failed:=true;end;
+ if not failed then raise exception 'Foreign focus session accepted';end if;
+end $$;
+rollback;
+select 'PASS: workout week, module snapshots, focus idempotency, import idempotency, history preservation and RLS. All test writes rolled back.' as result,(select count(*) from public.tasks where title like '__AQ_TEST__%') as leftover_test_tasks;

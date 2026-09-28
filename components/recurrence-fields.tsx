@@ -1,9 +1,9 @@
 'use client';
 import { useState } from 'react';
 import { today, field, type Rule } from '@/lib/planning';
-export function RecurrenceFields({ initial=null, lockedStart=false }: { initial?:Rule|null; lockedStart?:boolean }) {
+export function RecurrenceFields({ initial=null, lockedStart=false, initialStart }: { initial?:Rule|null; lockedStart?:boolean; initialStart?:string }) {
  const [frequency,setFrequency]=useState(initial?.frequency??'none');
- const [interval,setInterval]=useState(initial?.interval??1),[start,setStart]=useState(initial?.start??today());
+ const [interval,setInterval]=useState(initial?.interval??1),[start,setStart]=useState(initial?.start??initialStart??today());
  const [weekdays,setWeekdays]=useState(initial?.weekdays??[new Date(`${start}T12:00:00`).getDay()]);
  const [end,setEnd]=useState(initial?.until?'date':initial?.count?'count':'never');
  const [until,setUntil]=useState(initial?.until??start),[count,setCount]=useState(initial?.count??10);

@@ -1,2 +1,2 @@
-export type Task = { id: string; title: string; category?: string | null; priority?: string | null; estimated_hours?: number | null; due_date?: string | null };
+export type Task = { status?: string; completed_at?: string | null; created_at?: string; id: string; title: string; category?: string | null; priority?: string | null; estimated_hours?: number | null; due_date?: string | null };
 export type Boss = { description?: string | null; due_date?: string | null; id: string; name: string; max_hp: number; current_hp: number; category?: string | null; defeated_at?: string | null };

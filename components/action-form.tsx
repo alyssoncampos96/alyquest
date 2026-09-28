@@ -11,7 +11,7 @@ export function ActionForm({ action, children, className, resetOnSuccess = false
     const data = new FormData(form);
     busy.current = true; setPending(true); setError("");
     startTransition(async () => {
-    try { await action(data); if (resetOnSuccess) form.reset(); }
+    try { await action(data); if (resetOnSuccess) { form.reset(); form.closest("dialog")?.close(); } }
     catch { setError("Não foi possível salvar. Confira sua conexão, sessão e os dados informados e tente novamente."); }
     finally { busy.current = false; setPending(false); }
     });
