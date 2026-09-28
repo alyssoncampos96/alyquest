@@ -1,3 +1,5 @@
+> Atualização de 27/09/2026: a validação real de recompensas que estava pendente abaixo foi concluída no Supabase com testes transacionais e ROLLBACK. Consulte PLANEJAMENTO.md para os novos recursos, SQLs aplicados e resultados.
+
 # Auditoria AlyQuest — 27/09/2026
 
 Projeto: `/Users/alyssoncampos/Desktop/alyquest`.

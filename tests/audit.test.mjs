@@ -17,7 +17,7 @@ function actions({user = {id:'user'}, error = null} = {}) {
 test('completeTask delegates task completion to the existing RPC and invalidates all affected pages', async()=>{
   const {api,calls,paths}=actions(); await api.completeTask('task');
   assert.equal(calls.length,1); assert.equal(calls[0].name,'complete_task'); assert.equal(calls[0].args.p_task_id,'task');
-  assert.deepEqual(paths,['/','/tasks','/focus','/bosses','/shop','/achievements']);
+  assert.deepEqual(paths,['/','/tasks','/workouts','/focus','/bosses','/shop','/achievements']);
 });
 test('unauthenticated task completion never invokes RPC',async()=>{
   const {api,calls,paths}=actions({user:null});await assert.rejects(api.completeTask('task'),/autenticado/);assert.equal(calls.length,0);assert.equal(paths.length,0);
