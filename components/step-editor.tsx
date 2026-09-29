@@ -1,26 +1,45 @@
 'use client';
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useRef, useEffect } from 'react';
+import { stepSavers } from './step-save-registry';
+import { previousExercise } from '@/lib/task-dates';
+import { parseSteps } from '@/lib/planning';
 import { saveSteps, saveModule } from '@/app/planning-actions';
 import { defaults, field, type Step, type Module } from '@/lib/planning';
 function newStepId() { return typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `step-${Date.now()}-${Math.random().toString(36).slice(2)}`; }
-export function StepEditor({taskId,initial=[],modules=[],readOnly=false,workout=false,module}:{taskId?:string;initial?:Step[];modules?:Module[];readOnly?:boolean;workout?:boolean;module?:Module}) {
+export function StepEditor({taskId,initial=[],modules=[],readOnly=false,workout=false,module,revision=0,previous=[]}:{taskId?:string;initial?:Step[];modules?:Module[];readOnly?:boolean;workout?:boolean;module?:Module;revision?:number;previous?:Step[]}) {
  const [steps,setSteps]=useState<Step[]>(initial),[name,setName]=useState(module?.name??'');
- const [pending,startTransition]=useTransition(),[message,setMessage]=useState(''),[dirty,setDirty]=useState(false);
- function change(next:Step[]){setSteps(next);setDirty(true);setMessage('');}
+ const [pending,startTransition]=useTransition(),[message,setMessage]=useState(''),[dirty,setDirty]=useState(false),[editing,setEditing]=useState<string|null>(null);
+ const latest=useRef(initial),rev=useRef(revision),saved=useRef(JSON.stringify(initial)),flight=useRef<Promise<void>|null>(null);
+ useEffect(()=>{if(flight.current||JSON.stringify(latest.current)!==saved.current||revision<rev.current)return;rev.current=revision;const json=JSON.stringify(initial);if(json!==saved.current){latest.current=initial;saved.current=json;setSteps(initial);setDirty(false);}},[revision,initial,readOnly]);
+ function change(next:Step[]){latest.current=next;setSteps(next);setDirty(true);setMessage('');}
  function patch(id:string,values:Partial<Step>){change(steps.map(step=>step.id===id?{...step,...values}:step));}
- function addModule(m:Module){change([...steps,...m.steps.map(step=>({...step,id:newStepId(),done:false,actual:''}))]);}
- function save(){startTransition(async()=>{try{if(taskId)await saveSteps(taskId,steps);else await saveModule(module?.id??null,name,steps);setDirty(false);setMessage('Salvo.');}catch(error){setMessage(error instanceof Error?error.message:'Não foi possível salvar.');}});}
+ function addModule(m:Module){change([...steps,...m.steps.filter(s=>!steps.some(current=>current.title.trim().toLowerCase()===s.title.trim().toLowerCase())).map(step=>({...step,id:newStepId(),done:false,actual:''}))]);}
+ async function persist(){
+  if(!taskId||readOnly)return;if(flight.current){await flight.current;return persist();}
+  const snapshot=latest.current,json=JSON.stringify(snapshot);if(json===saved.current)return;parseSteps(snapshot);
+  const work=(async()=>{setMessage('Salvando…');const result=await saveSteps(taskId,snapshot,rev.current);rev.current=result.revision;saved.current=json;setDirty(JSON.stringify(latest.current)!==json);setMessage('Salvo automaticamente.');if(result.xp!==0)window.dispatchEvent(new CustomEvent('aq:reward',{detail:{task_id:taskId,xp:result.xp,coins:result.coins,damage:0,undo_id:null,sheet:'Etapas atualizadas. Desmarcar reverte a recompensa.'}}));})();flight.current=work;try{await work;}finally{flight.current=null;}
+  if(JSON.stringify(latest.current)!==saved.current)await persist();
+ }
+ const persistRef=useRef(persist);persistRef.current=persist;
+ useEffect(()=>{if(!taskId||readOnly)return;stepSavers.set(taskId,()=>persistRef.current());return()=>{stepSavers.delete(taskId);};},[taskId,readOnly]);
+ useEffect(()=>{if(!taskId||readOnly||!dirty)return;const timer=setTimeout(()=>{void persistRef.current().catch(e=>setMessage(e instanceof Error?e.message:'Falha ao salvar. Tente novamente.'));},700);return()=>clearTimeout(timer);},[steps,dirty,taskId,readOnly]);
+ useEffect(()=>{if(!dirty||!taskId)return;const warn=(e:BeforeUnloadEvent)=>{e.preventDefault();};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[dirty,taskId]);
+ function save(){startTransition(async()=>{try{if(taskId)await persist();else{await saveModule(module?.id??null,name,steps);setDirty(false);setMessage('Salvo.');}}catch(error){setMessage(error instanceof Error?error.message:'Não foi possível salvar.');}});}
+
  return <div className="space-y-3">
  {!taskId&&!readOnly&&<label className="block text-sm">Nome do módulo<input className={field} maxLength={100} value={name} onChange={e=>{setName(e.target.value);setDirty(true)}} placeholder="Ex.: Meu treino de braço"/></label>}
- {!readOnly&&workout&&<div><p className="text-sm text-slate-400">Adicione os módulos que quiser fazer nesta sessão.</p><div className="mt-2 flex flex-wrap gap-2">{[...defaults,...modules].map(m=><button key={m.id} disabled={pending} type="button" onClick={()=>addModule(m)} className="rounded-xl border border-violet-800 bg-violet-950 px-3 py-2 text-sm">+ {m.name}</button>)}</div></div>}
+ {!readOnly&&workout&&<details open={!steps.length||undefined}><summary className="cursor-pointer text-sm text-violet-300">{steps.length?'Adicionar módulos ao treino':'Escolher módulos para este treino'}</summary><div className="mt-2 flex flex-wrap gap-2">{[...modules,...defaults].map(m=><button key={m.id} disabled={pending||m.steps.every(s=>steps.some(current=>current.title.trim().toLowerCase()===s.title.trim().toLowerCase()))} type="button" onClick={()=>addModule(m)} className="rounded-xl border border-violet-800 bg-violet-950 px-3 py-2 text-sm">+ {m.name}</button>)}</div></details>}
  <p className="text-xs text-slate-400">{steps.filter(s=>s.done).length}/{steps.length} etapas concluídas{dirty?' • Alterações não salvas':''}</p>
- {steps.map((step,index)=><fieldset disabled={pending||readOnly} key={step.id} className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+ {taskId?steps.map((step,index)=><div key={step.id} className={`rounded-xl border p-3 ${step.done?'border-emerald-900 bg-emerald-950/20':'border-slate-700 bg-slate-950'}`}>
+ <div className="flex items-start gap-3"><input disabled={readOnly||pending} aria-label={`Concluir ${step.title||`exercício ${index+1}`}`} type="checkbox" checked={step.done} onChange={e=>patch(step.id,{done:e.target.checked})} className="mt-1 h-5 w-5 shrink-0 accent-emerald-500"/><div className="min-w-0 flex-1"><p className={`text-sm font-semibold ${step.done?'text-emerald-300':''}`}>{step.title||'Novo exercício'}</p><p className="mt-1 text-xs text-slate-400">{step.target||'Meta a definir'}</p>{step.actual&&<p className="mt-1 text-xs text-cyan-300">Feito: {step.actual}</p>}{previousExercise(previous,step.title)&&<p className="mt-1 text-xs text-slate-500">Último: {previousExercise(previous,step.title)}</p>}</div>{!readOnly&&<button type="button" aria-expanded={editing===step.id} onClick={()=>setEditing(editing===step.id?null:step.id)} className="rounded-lg px-2 py-1 text-xs text-violet-300">{editing===step.id?'Fechar':'Ajustar'}</button>}</div>
+ {!readOnly&&(editing===step.id||!step.title)&&<div className="mt-3 space-y-2 border-t border-slate-800 pt-3"><label className="block text-xs">Exercício<input maxLength={200} className={field} value={step.title} onChange={e=>patch(step.id,{title:e.target.value})}/></label><label className="block text-xs">Meta<input maxLength={300} className={field} value={step.target} onChange={e=>patch(step.id,{target:e.target.value})}/></label><label className="block text-xs">O que você fez<input maxLength={500} className={field} value={step.actual} placeholder={previousExercise(previous,step.title)||'Ex.: 3 × 12 com 8 kg'} onChange={e=>patch(step.id,{actual:e.target.value})}/></label><button type="button" onClick={()=>change(steps.filter(s=>s.id!==step.id))} className="py-2 text-xs text-red-300">Remover exercício</button></div>}
+ </div>):steps.map((step,index)=><fieldset disabled={pending||readOnly} key={step.id} className="rounded-xl border border-slate-700 bg-slate-950 p-3">
  <div className="flex items-start gap-2"><label className="mt-3 flex shrink-0 items-center gap-1"><input aria-label={`Concluir ${step.title||`etapa ${index+1}`}`} type="checkbox" checked={step.done} onChange={e=>patch(step.id,{done:e.target.checked})}/><span className="text-xs">{index+1}</span></label><label className="min-w-0 flex-1 text-xs">Exercício / etapa<input maxLength={200} className={field} value={step.title} onChange={e=>patch(step.id,{title:e.target.value})}/></label>{!readOnly&&<button type="button" aria-label={`Remover etapa ${index+1}`} onClick={()=>change(steps.filter(s=>s.id!==step.id))} className="mt-7 text-slate-400">✕</button>}</div>
  <label className="mt-2 block text-xs">Meta (séries, repetições, carga, km ou tempo)<input maxLength={300} className={field} value={step.target} onChange={e=>patch(step.id,{target:e.target.value})}/></label>
+ {taskId&&previousExercise(previous,step.title)&&<p className="mt-2 text-xs text-cyan-300">Último registro: {previousExercise(previous,step.title)}</p>}
  {taskId&&<label className="mt-2 block text-xs">Realizado / observações<input maxLength={500} className={field} value={step.actual} placeholder="Ex.: 3 × 12 com 8 kg" onChange={e=>patch(step.id,{actual:e.target.value})}/></label>}
- </fieldset>)}
- {!readOnly&&<><button type="button" disabled={pending||steps.length>=100} onClick={()=>change([...steps,{id:newStepId(),title:'',target:'',actual:'',done:false}])} className="rounded-xl border border-slate-600 px-3 py-2 text-sm">+ Adicionar etapa</button><button type="button" disabled={pending} onClick={save} className="ml-2 rounded-xl bg-violet-600 px-3 py-2 text-sm font-bold disabled:opacity-50">{pending?'Salvando...':taskId?'Salvar progresso':'Salvar módulo'}</button></>}
+ </fieldset>)} {!readOnly&&<><button type="button" disabled={pending||steps.length>=100} onClick={()=>change([...steps,{id:newStepId(),title:'',target:'',actual:'',done:false}])} className="rounded-xl border border-slate-600 px-3 py-2 text-sm">{workout?'+ Exercício avulso':'+ Adicionar etapa'}</button><button type="button" disabled={pending} onClick={save} className="ml-2 rounded-xl bg-violet-600 px-3 py-2 text-sm font-bold disabled:opacity-50">{pending?'Salvando...':taskId?'Salvar agora':'Salvar módulo'}</button></>}
  {message&&<p role="status" className="text-sm text-violet-200">{message}</p>}
- {taskId&&!readOnly&&<p className="text-xs text-slate-400">Salve antes de sair ou concluir a missão. Etapas registram o progresso; XP, moedas e dano são concedidos uma vez ao concluir a missão, inclusive se você decidir encerrá-la parcialmente.</p>}
+ {taskId&&!readOnly&&<p className="text-xs text-slate-400">Salvamento automático · +1 XP e moeda por etapa, +1 ao concluir. Desmarcar reverte a etapa.</p>}
  </div>;
 }

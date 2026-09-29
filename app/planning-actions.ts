@@ -6,7 +6,7 @@ async function session() { const s=await createClient(); const {data:{user}}=awa
 function refresh() { ['/', '/tasks', '/workouts', '/bosses', '/focus', '/shop', '/achievements'].forEach(path=>revalidatePath(path)); }
 async function invoke(name:string,args:Record<string,unknown>) {
  const s=await session();const {data,error}=await s.rpc(name,args);
- if(error) {if(['PGRST202','PGRST205','42P01'].includes(error.code))throw new Error('O banco ainda precisa da atualização de planejamento.');throw new Error('Não foi possível salvar. Confira os dados e sua conexão.');}
+ if(error) {if(['PGRST202','PGRST205','42P01'].includes(error.code))throw new Error('O banco ainda precisa da atualização de planejamento.');throw new Error(error.code==='P0001'?error.message:'Não foi possível salvar. Confira os dados e sua conexão.');}
  refresh();return data;
 }
 async function missionData(form:FormData) {
@@ -17,7 +17,7 @@ async function missionData(form:FormData) {
  const due=String(form.get('due_date')??'');if(due&&!/^\d{4}-\d{2}-\d{2}$/.test(due))throw new Error('Prazo inválido.');
  return {p_data:{title,category,priority,estimated_hours:hours,boss_id:form.get('boss_id')||null,due_date:due||null,kind,...(form.has('steps')?{steps:parseSteps(JSON.parse(String(form.get('steps')))).map(s=>({...s,done:false,actual:''}))}:{})},p_rule:rule};
 }
-export async function saveSteps(id:string,steps:unknown) { await invoke('aq_save_steps',{p_task_id:id,p_steps:parseSteps(steps)}); }
+export async function saveSteps(id:string,steps:unknown,revision=0) { return await invoke('aq_save_steps_v2',{p_task_id:id,p_steps:parseSteps(steps),p_revision:revision}) as {revision:number;xp:number;coins:number}; }
 export async function saveModule(id:string|null,name:string,steps:unknown) {
  const clean=parseSteps(steps).map(s=>({...s,actual:'',done:false}));if(!name.trim()||name.trim().length>100||!clean.length)throw new Error('Informe o nome e ao menos um exercício.');
  await invoke('aq_save_module',{p_id:id,p_name:name.trim(),p_steps:clean});
@@ -32,8 +32,8 @@ export async function materializeRoutines() {
  const s=await session();const {data,error}=await s.rpc('aq_materialize');if(error)throw new Error('Não foi possível atualizar as recorrências.');if(Number(data)>0)refresh();return Number(data);
 }
 
-export async function saveMission(id:string|null,form:FormData){await invoke('aq_save_task',{p_task_id:id,...await missionData(form),p_scope:form.get('scope')||'one'});}
-export async function saveRoutine(id:string,form:FormData){await invoke('aq_save_routine',{p_id:id,...await missionData(form)});}
+export async function saveMission(id:string|null,form:FormData){await invoke('aq_edit_mission',{p_task_id:id,p_routine_id:null,...await missionData(form),p_scope:form.get('scope')||'one'});}
+export async function saveRoutine(id:string,form:FormData){await invoke('aq_edit_mission',{p_task_id:null,p_routine_id:id,...await missionData(form),p_scope:'all'});}
 export async function repeatWorkout(id:string){await invoke('aq_repeat_workout',{p_task_id:id});}
 
 export async function finishFocus(id:string,taskIds:string[],other:string,phase:'focus'|'break',focus:number,rest:number) {return await invoke('aq_complete_focus',{p_session_id:id,p_task_ids:taskIds,p_other:other,p_phase:phase,p_focus_minutes:focus,p_break_minutes:rest}) as string;}

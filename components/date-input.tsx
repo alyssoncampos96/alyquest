@@ -1,0 +1,3 @@
+"use client";
+import {useRef,type InputHTMLAttributes} from 'react';
+export function DateInput(props:InputHTMLAttributes<HTMLInputElement>){const ref=useRef<HTMLInputElement>(null);return <div className="relative mt-2 min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-700 bg-slate-950"><input {...props} ref={ref} type="date" className="aq-date block h-12 w-full min-w-0 max-w-full appearance-none bg-transparent px-3 pr-10 text-sm text-white"/><button tabIndex={-1} disabled={props.disabled} type="button" aria-label="Abrir calendário" onClick={()=>{try{ref.current?.showPicker();}catch{ref.current?.focus();}}} className="absolute inset-y-0 right-0 grid w-10 place-items-center text-violet-300">▦</button></div>;}

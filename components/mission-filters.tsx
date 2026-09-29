@@ -13,7 +13,7 @@ export function MissionFilters({ missions, children }: { missions: Mission[]; ch
   const visible = selected === null ? filtered : filtered.filter(mission => (mission.category || "Sem categoria") === selected);
 
   return <>
-    <div role="group" aria-label="Status das missões" className="mt-5 flex gap-2">{[['pending','Pendentes'],['completed','Concluídas'],['all','Todas']].map(([value,label])=><button key={value} aria-pressed={status===value} onClick={()=>setStatus(value)} className={`rounded-xl px-3 py-2 text-sm ${status===value?'bg-violet-600':'bg-slate-800 text-slate-300'}`}>{label}</button>)}</div>
+    <div role="group" aria-label="Status das missões" className="mt-5 flex flex-wrap gap-2">{[['pending','Pendentes'],['completed','Concluídas'],['all','Todas'],['cancelled','Canceladas'],['skipped','Puladas']].map(([value,label])=><button key={value} aria-pressed={status===value} onClick={()=>setStatus(value)} className={`rounded-xl px-3 py-2 text-sm ${status===value?'bg-violet-600':'bg-slate-800 text-slate-300'}`}>{label}</button>)}</div>
     <div role="group" aria-label="Filtrar missões por categoria" className="mt-5 flex flex-wrap gap-2">
       {[null, ...options].map(category => {
         const active = selected === category;
@@ -30,7 +30,7 @@ export function MissionFilters({ missions, children }: { missions: Mission[]; ch
     </div>
     {children}
     <section id="filtered-missions" aria-label="Missões filtradas">
-      <h2 aria-live="polite" className="mb-3 mt-7 text-lg font-bold">{selected??(status==='completed'?'Concluídas':status==='pending'?'Pendentes':'Todas as missões')} ({visible.length})</h2>
+      <h2 aria-live="polite" className="mb-3 mt-7 text-lg font-bold">{selected??(status==='completed'?'Concluídas':status==='pending'?'Pendentes':status==='cancelled'?'Canceladas':status==='skipped'?'Puladas':'Todas as missões')} ({visible.length})</h2>
       <div className="space-y-3">
         {visible.map(mission => <div key={mission.id}>{mission.card}</div>)}
         {!visible.length && <p className="rounded-2xl border border-slate-800 bg-slate-900 p-5 text-sm text-slate-400">{selected ? `Nenhuma missão em ${selected}.` : "Nenhuma missão."}</p>}

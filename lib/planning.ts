@@ -3,7 +3,7 @@ export type Step = { id: string; title: string; target: string; actual: string; 
 export type Module = { id: string; name: string; steps: Step[] };
 export type Rule = { frequency: 'daily' | 'weekly' | 'monthly' | 'yearly'; interval: number; weekdays: number[]; start: string; until: string | null; count: number | null };
 export type Routine = { id: string; title: string; category: string; priority: string; estimated_hours: number; boss_id: string | null; kind: string; rule: Rule; active: boolean; steps?: Step[]; cursor_date?: string | null; emitted?: number };
-export type Plan = { task_id: string; kind: string; steps: Step[]; routine_id: string | null; occurrence_date: string | null };
+export type Plan = { revision?: number; rewarded_steps?:number; task_id: string; kind: string; steps: Step[]; routine_id: string | null; occurrence_date: string | null };
 export const defaults: Module[] = [
   { id: 'running', name: '🏃 Corrida', steps: [{ id: 'run', title: 'Esteira', target: '3 km', actual: '', done: false }] },
   { id: 'arms', name: '💪 Braços', steps: [{ id: 'curl', title: 'Rosca bíceps', target: '3 séries × 12 repetições • carga a definir', actual: '', done: false }, { id: 'triceps', title: 'Tríceps', target: '3 séries × 12 repetições • carga a definir', actual: '', done: false }] },
