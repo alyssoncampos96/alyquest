@@ -14,7 +14,7 @@ async function Content() {
   if (!user) redirect("/auth/login");
   const [{ data: xpRows }, { data: equipped }, { data: victories }] = await Promise.all([
     supabase.from("xp_transactions").select("amount").eq("user_id", user.id),
-    supabase.from("user_items").select("equipped,items(name,icon,damage_bonus,item_type,battle_slot,pet_ability)").eq("user_id", user.id).eq("equipped", true),
+    supabase.from("user_items").select("equipped,items(name,icon,damage_bonus)").eq("user_id", user.id).eq("equipped", true),
     supabase.from("aq_arena_victories").select("monster_id").eq("user_id", user.id),
   ]).then(results => { results.forEach(checked); return results; });
   const xp = (xpRows ?? []).reduce((sum, row) => sum + Number(row.amount), 0);
