@@ -27,11 +27,33 @@ async function Content() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
-  const [{ data: xpRows }, { data: equipped }, { data: victories }] = await Promise.all([
+  const [xpResult, victoriesResult] = await Promise.all([
     supabase.from("xp_transactions").select("amount").eq("user_id", user.id),
-    supabase.from("user_items").select("equipped,items(name,icon,damage_bonus,item_type,battle_slot,pet_ability,rarity,effect,defense_bonus,crit_bonus)").eq("user_id", user.id).eq("equipped", true),
     supabase.from("aq_arena_victories").select("monster_id").eq("user_id", user.id),
-  ]).then(results => { results.forEach(checked); return results; });
+  ]);
+  checked(xpResult);
+  checked(victoriesResult);
+
+  const equippedWithStats = await supabase
+    .from("user_items")
+    .select("equipped,items(name,icon,damage_bonus,item_type,battle_slot,pet_ability,rarity,effect,defense_bonus,crit_bonus)")
+    .eq("user_id", user.id)
+    .eq("equipped", true);
+
+  let equippedRows = equippedWithStats.data as { equipped: boolean; items: ArenaItem | ArenaItem[] | null }[] | null;
+  if (equippedWithStats.error) {
+    const equippedLegacy = await supabase
+      .from("user_items")
+      .select("equipped,items(name,icon,damage_bonus,item_type,battle_slot,pet_ability)")
+      .eq("user_id", user.id)
+      .eq("equipped", true);
+    checked(equippedLegacy);
+    equippedRows = equippedLegacy.data as { equipped: boolean; items: ArenaItem | ArenaItem[] | null }[] | null;
+  }
+
+  const xpRows = xpResult.data;
+  const victories = victoriesResult.data;
+  const equipped = equippedRows;
   const xp = (xpRows ?? []).reduce((sum, row) => sum + Number(row.amount), 0);
   const level = getLevelProgress(xp).level;
   const equippedAll = (equipped ?? []).map(row => Array.isArray(row.items) ? row.items[0] : row.items).filter(Boolean) as ArenaItem[];
