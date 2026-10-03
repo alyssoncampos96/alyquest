@@ -4,9 +4,27 @@ import { createClient } from "@/lib/supabase/server";
 import { finishFast, startFast } from "@/app/fasting-actions";
 import { FastingActiveCard } from "@/components/fasting-active-card";
 
+function partsInSaoPaulo(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const get = (type: string) => parts.find(part => part.type === type)?.value ?? "00";
+  return { year: get("year"), month: get("month"), day: get("day"), hour: get("hour"), minute: get("minute") };
+}
+
 function localInput(date: Date) {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  const p = partsInSaoPaulo(date);
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+}
+
+function localDateTime(date: Date) {
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }).format(date);
 }
 
 async function Content() {
@@ -61,7 +79,7 @@ async function Content() {
             const startDate = new Date(s.started_at);
             const endDate = s.ended_at ? new Date(s.ended_at) : null;
             const hours = endDate ? Math.max(0, (endDate.getTime() - startDate.getTime()) / 36e5) : 0;
-            return <article key={s.id} className="rounded-2xl border border-slate-800 bg-slate-900 p-3"><div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold">{hours.toFixed(1).replace(".", ",")}h</h3><p className="mt-1 text-xs text-slate-400">{startDate.toLocaleString("pt-BR")} → {endDate?.toLocaleString("pt-BR") ?? "em aberto"}</p></div><p className="font-bold text-violet-300">+{s.reward_units} 🪙</p></div></article>;
+            return <article key={s.id} className="rounded-2xl border border-slate-800 bg-slate-900 p-3"><div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold">{hours.toFixed(1).replace(".", ",")}h</h3><p className="mt-1 text-xs text-slate-400">{localDateTime(startDate)} → {endDate ? localDateTime(endDate) : "em aberto"}</p></div><p className="font-bold text-violet-300">+{s.reward_units} 🪙</p></div></article>;
           })}
           {!sessions.filter(s => s.status !== "active").length && <p className="rounded-2xl border border-slate-800 p-4 text-sm text-slate-400">Nenhum jejum registrado ainda.</p>}
         </section>

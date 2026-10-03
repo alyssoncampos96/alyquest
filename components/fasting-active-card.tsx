@@ -32,7 +32,7 @@ export function FastingActiveCard({ startedAt }: { startedAt: string }) {
         <div className="mx-auto grid h-48 w-48 place-items-center rounded-full border-8 border-violet-500 bg-slate-950 shadow-inner">
           <div>
             <p className="text-4xl font-black tabular-nums">{duration.clock}</p>
-            <p className="mt-2 text-xs text-slate-400">desde {started.toLocaleString("pt-BR")}</p>
+            <p className="mt-2 text-xs text-slate-400">desde {started.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</p>
           </div>
         </div>
       </div>

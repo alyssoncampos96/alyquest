@@ -3,6 +3,7 @@ type Plan = { kind: string; steps?: { done?: boolean; actual?: string }[] };
 type Session = { focus_completed?: boolean; break_completed?: boolean };
 type Fast = { reward_units?: number; ended_at?: string | null };
 type Finance = { kind: string; category?: string | null; amount: number | string; source?: string | null; installment_count?: number | null };
+type ArenaVictory = { monster_id?: string | null };
 
 export type Achievement = { code: string; icon: string; title: string; description: string; unlocked: boolean; rewardXp: number; rewardCoins: number };
 
@@ -17,6 +18,7 @@ export function buildAchievements(ctx: {
   routines: number;
   fasts: Fast[];
   finance: Finance[];
+  arena: ArenaVictory[];
 }) {
   const completed = ctx.tasks.filter(t => t.status === "completed");
   const workouts = completed.filter((_, index) => ctx.plans[index]?.kind === "workout");
@@ -26,6 +28,7 @@ export function buildAchievements(ctx: {
   const sumExpense = expenses.reduce((n, f) => n + Number(f.amount), 0);
   const categories = new Set(ctx.tasks.map(t => t.category).filter(Boolean));
   const financeCategories = new Set(ctx.finance.map(f => f.category).filter(Boolean));
+  const arenaWins = new Set(ctx.arena.map(v => v.monster_id).filter(Boolean));
   const rows: [string, string, string, string, boolean, number, number][] = [
     ["first-task","🥇","Primeira missão","Conclua sua primeira missão.",completed.length>=1,2,2],
     ["ten-tasks","⚔️","Caçador de missões","Conclua 10 missões.",completed.length>=10,10,10],
@@ -76,7 +79,11 @@ export function buildAchievements(ctx: {
     ["early-system","🚀","Sistema vivo","Use tarefas, finanças e jejum ao menos uma vez.",ctx.tasks.length>0&&ctx.finance.length>0&&ctx.fasts.length>0,25,25],
     ["boss-linked","🎯","Meta conectada","Tenha missões vinculadas a chefes.",ctx.plans.length>0&&ctx.tasks.length>0&&ctx.bosses>=0,5,5],
     ["discipline","🏆","Disciplina composta","Some 100 ações recompensáveis.",completed.length+ctx.focus.filter(s=>s.focus_completed).length+totalFastUnits+ctx.finance.length>=100,80,80],
+
+    ["arena-first","⚔️","Primeira vitória","Derrote seu primeiro monstro na Arena.",arenaWins.size>=1,6,6],
+    ["arena-two","🛡️","Dupla vencida","Derrote dois monstros na Arena.",arenaWins.size>=2,10,10],
+    ["arena-boss","🐉","Caçador de dragões","Derrote o chefe da Arena.",arenaWins.has("level-3-dragon"),18,18],
     ["level-hundred","💎","Nível 100","Chegue ao nível 100.",false,100,100],
   ];
-  return rows.map(([code, icon, title, description, unlocked, rewardXp, rewardCoins]) => ({ code, icon, title, description, unlocked, rewardXp, rewardCoins }));
+  return rows.map(([code, icon, title, description, unlocked, rewardXp]) => ({ code, icon, title, description, unlocked, rewardXp, rewardCoins: 1 }));
 }

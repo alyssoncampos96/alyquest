@@ -8,7 +8,7 @@ async function safeData<T>(query: PromiseLike<{ data: T | null; error: { message
 }
 
 export async function loadAchievementState(supabase: SupabaseClient, userId: string) {
-  const [bosses, profile, tasks, plans, modules, links, focus, routines, fasts, finance, claims] = await Promise.all([
+  const [bosses, profile, tasks, plans, modules, links, focus, routines, fasts, finance, arena, claims] = await Promise.all([
     supabase.from("bosses").select("id", { count: "exact", head: true }).eq("user_id", userId).not("defeated_at", "is", null).then(checked),
     supabase.from("profiles").select("current_streak").eq("user_id", userId).maybeSingle().then(checked),
     supabase.from("tasks").select("status,category,due_date,completed_at").eq("user_id", userId).then(checked),
@@ -19,6 +19,7 @@ export async function loadAchievementState(supabase: SupabaseClient, userId: str
     supabase.from("aq_routines").select("id", { count: "exact", head: true }).eq("user_id", userId).then(checked),
     safeData(supabase.from("aq_fasting_sessions").select("reward_units,ended_at").eq("user_id", userId), []),
     safeData(supabase.from("aq_finance_transactions").select("kind,category,amount,source,installment_count").eq("user_id", userId), []),
+    safeData(supabase.from("aq_arena_victories").select("monster_id").eq("user_id", userId), []),
     safeData(supabase.from("aq_achievement_claims").select("code,claimed_at").eq("user_id", userId), []),
   ]);
   const claimedCodes = new Set((claims as { code: string }[]).map(claim => claim.code));
@@ -33,6 +34,7 @@ export async function loadAchievementState(supabase: SupabaseClient, userId: str
     routines: routines.count ?? 0,
     fasts,
     finance,
+    arena,
   }).map(achievement => ({ ...achievement, claimed: claimedCodes.has(achievement.code) }));
   return { achievements, claimedCodes };
 }

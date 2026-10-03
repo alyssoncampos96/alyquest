@@ -12,8 +12,8 @@ export async function GET(request: NextRequest) {
     openapi: "3.1.0",
     info: {
       title: "AlyQuest Assistente",
-      version: "1.1.0",
-      description: "Ações autorizadas para registrar finanças pessoais, consultar lançamentos, criar e concluir missões e controlar jejuns no AlyQuest.",
+      version: "1.2.0",
+      description: "Ações autorizadas para usar o AlyQuest via IA: tarefas, finanças, jejum, loja e equipamentos.",
     },
     servers: [{ url: origin }],
     paths: {
@@ -227,6 +227,51 @@ export async function GET(request: NextRequest) {
             },
           },
           responses: { "200": { description: "Jejum finalizado" }, ...errorResponses },
+        },
+      },
+
+      "/api/gpt/tasks/state": {
+        post: {
+          operationId: "alterarEstadoMissao",
+          summary: "Adia, cancela, pula ou restaura uma missão",
+          security: auth,
+          requestBody: { required: true, content: { "application/json": { schema: { type: "object", additionalProperties: false, required: ["task_id", "action"], properties: { task_id: { type: "string", format: "uuid" }, action: { type: "string", enum: ["postpone", "cancel", "skip", "restore"] }, date: { type: "string", format: "date", description: "Obrigatório para postpone" } } } } } },
+          responses: { "200": { description: "Missão atualizada" }, ...errorResponses },
+        },
+      },
+      "/api/gpt/finance/recurring": {
+        post: {
+          operationId: "criarRecorrenciaFinanceira",
+          summary: "Cria gasto ou receita recorrente",
+          security: auth,
+          requestBody: { required: true, content: { "application/json": { schema: { type: "object", additionalProperties: false, required: ["title", "amount", "start_on"], properties: { title: { type: "string" }, amount: { type: "number" }, kind: { type: "string", enum: ["expense", "income"], default: "expense" }, category: { type: "string" }, start_on: { type: "string", format: "date" }, frequency: { type: "string", enum: ["weekly", "monthly", "yearly"], default: "monthly" }, payment_method: { type: "string", enum: ["cash", "pix", "debit", "credit", "bank_transfer", "other"] }, notes: { type: "string" } } } } } },
+          responses: { "200": { description: "Recorrência criada" }, ...errorResponses },
+        },
+      },
+      "/api/gpt/shop/list": {
+        post: {
+          operationId: "listarLojaInventario",
+          summary: "Lista moedas, loja, itens comprados e equipados",
+          security: auth,
+          responses: { "200": { description: "Loja e inventário" }, ...errorResponses },
+        },
+      },
+      "/api/gpt/shop/purchase": {
+        post: {
+          operationId: "comprarItemLoja",
+          summary: "Compra item da loja e opcionalmente equipa",
+          security: auth,
+          requestBody: { required: true, content: { "application/json": { schema: { type: "object", additionalProperties: false, required: ["item_id"], properties: { item_id: { type: "string", format: "uuid" }, equip: { type: "boolean", default: false } } } } } },
+          responses: { "200": { description: "Item comprado" }, ...errorResponses },
+        },
+      },
+      "/api/gpt/shop/equip": {
+        post: {
+          operationId: "equiparItemLoja",
+          summary: "Equipa ou desequipa item comprado",
+          security: auth,
+          requestBody: { required: true, content: { "application/json": { schema: { type: "object", additionalProperties: false, required: ["item_id"], properties: { item_id: { type: "string", format: "uuid" } } } } } },
+          responses: { "200": { description: "Item atualizado" }, ...errorResponses },
         },
       },
     },
