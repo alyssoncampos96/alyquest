@@ -1,58 +1,17 @@
-import { ActionForm } from "@/components/action-form";
 import { redirect } from "next/navigation";
 import { checked } from "@/lib/query";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
-import { equipItem, purchaseItem } from "@/app/actions";
 import { formatNumber } from "@/lib/game";
 import Link from "next/link";
+import { ItemCard } from "@/components/item-card";
+import { itemSlot, itemType, type ShopItem } from "@/lib/items";
 
-type Item = { id: string; name: string; icon: string; description: string; price: number | string; damage_bonus: number | string; item_type?: string | null; battle_slot?: string | null; pet_ability?: string | null };
+type UserItem = { item_id: string; equipped: boolean };
 
-const slotLabels: Record<string, string> = {
-  weapon: "Arma",
-  armor: "Armadura",
-  boots: "Botas",
-  cloak: "Capa",
-  helmet: "Elmo",
-  accessory: "Acessório",
-  pet: "Pet",
-  cosmetic: "Colecionável",
-};
-
-function ItemCard({ item, owned, equipped, coins }: { item: Item; owned: boolean; equipped: boolean; coins: number }) {
-  const price = Number(item.price);
-  const bonus = Number(item.damage_bonus ?? 0);
-  const affordable = coins >= price;
-  const type = item.item_type ?? (bonus > 0 ? "equipment" : "cosmetic");
-  const slot = item.battle_slot ?? type;
-  return (
-    <article className={`rounded-2xl border p-4 ${equipped ? "border-emerald-600 bg-emerald-950/30" : "border-slate-700 bg-slate-900"}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="text-3xl">{item.icon}</div>
-        <span className="rounded-full bg-slate-950 px-2 py-1 text-[10px] font-bold text-slate-300">{slotLabels[slot] ?? slot}</span>
-      </div>
-      <h2 className="mt-2 text-sm font-bold">{item.name}</h2>
-      <p className="mt-1 min-h-10 text-xs text-slate-400">{item.description}</p>
-      {type === "pet" ? <p className="mt-2 text-xs font-bold text-fuchsia-300">Pet: {item.pet_ability ?? "ajuda na batalha"}</p> : bonus > 0 ? <p className="mt-2 text-xs font-bold text-emerald-400">+{formatNumber(bonus * 100)}% poder</p> : <p className="mt-2 text-xs font-bold text-violet-300">Decorativo</p>}
-      {!owned ? (
-        <ActionForm action={purchaseItem.bind(null, item.id)}>
-          <button disabled={!affordable} className="mt-3 w-full rounded-xl bg-violet-600 py-2 text-xs font-bold disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500">
-            {affordable ? `Comprar · ${formatNumber(price)} 🪙` : `Faltam ${formatNumber(price - coins)} 🪙`}
-          </button>
-        </ActionForm>
-      ) : type === "equipment" || type === "pet" ? (
-        <ActionForm action={equipItem.bind(null, item.id)}>
-          <button className={`mt-3 w-full rounded-xl py-2 text-xs font-bold ${equipped ? "bg-emerald-700 text-emerald-100" : "bg-slate-800"}`}>{equipped ? "Equipado ✓" : "Equipar"}</button>
-        </ActionForm>
-      ) : <p className="mt-3 rounded-xl bg-slate-950 py-2 text-center text-xs font-bold text-slate-400">Na coleção</p>}
-    </article>
-  );
-}
-
-function Section({ title, description, items, ownership, coins }: { title: string; description: string; items: Item[]; ownership: Map<string, boolean>; coins: number }) {
+function Section({ title, description, items, ownership, coins }: { title: string; description: string; items: ShopItem[]; ownership: Map<string, boolean>; coins: number }) {
   if (!items.length) return null;
-  return <section className="mt-6"><h2 className="font-bold">{title}</h2><p className="mt-1 text-xs text-slate-400">{description}</p><div className="mt-3 grid grid-cols-2 gap-3">{items.map(item => <ItemCard key={item.id} item={item} owned={ownership.has(item.id)} equipped={ownership.get(item.id) === true} coins={coins} />)}</div></section>;
+  return <section className="mt-6"><h2 className="font-black">{title}</h2><p className="mt-1 text-xs text-slate-400">{description}</p><div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">{items.map(item => <ItemCard key={item.id} item={item} owned={ownership.has(item.id)} equipped={ownership.get(item.id) === true} coins={coins} />)}</div></section>;
 }
 
 async function Content() {
@@ -65,34 +24,34 @@ async function Content() {
     supabase.from("coin_transactions").select("amount").eq("user_id", user.id),
   ]).then(results => { results.forEach(checked); return results; });
   const coins = (coinsRows ?? []).reduce((a, r) => a + Number(r.amount), 0);
-  const ownership = new Map((owned ?? []).map(r => [r.item_id, r.equipped]));
-  const shopItems = (items ?? []) as Item[];
-  const equipment = shopItems.filter(item => (item.item_type ?? (Number(item.damage_bonus ?? 0) > 0 ? "equipment" : "cosmetic")) === "equipment");
-  const pets = shopItems.filter(item => item.item_type === "pet");
-  const cosmetics = shopItems.filter(item => (item.item_type ?? (Number(item.damage_bonus ?? 0) > 0 ? "equipment" : "cosmetic")) === "cosmetic");
+  const ownership = new Map(((owned ?? []) as UserItem[]).map(r => [r.item_id, r.equipped]));
+  const shopItems = (items ?? []) as ShopItem[];
+  const weapons = shopItems.filter(item => itemType(item) === "equipment" && itemSlot(item) === "weapon");
+  const armor = shopItems.filter(item => itemType(item) === "equipment" && ["armor", "helmet"].includes(itemSlot(item)));
+  const mobility = shopItems.filter(item => itemType(item) === "equipment" && ["boots", "cloak"].includes(itemSlot(item)));
+  const accessories = shopItems.filter(item => itemType(item) === "equipment" && itemSlot(item) === "accessory");
+  const pets = shopItems.filter(item => itemType(item) === "pet");
+  const consumables = shopItems.filter(item => itemType(item) === "consumable");
+  const cosmetics = shopItems.filter(item => ["cosmetic", "theme"].includes(itemType(item)));
   return (
     <main className="min-h-screen px-4 pb-28 pt-6">
       <div className="mx-auto max-w-md">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-black">Loja</h1>
-            <p className="mt-1 text-sm text-slate-400">Troque moedas por equipamentos, pets e colecionáveis.</p>
-          </div>
-          <div className="rounded-full border border-slate-700 bg-slate-900 px-3 py-2">🪙 {formatNumber(coins)}</div>
+        <div className="flex items-center justify-between gap-3">
+          <div><h1 className="text-2xl font-black">Loja</h1><p className="mt-1 text-sm text-slate-400">Itens por categoria, raridade e efeito.</p></div>
+          <div className="rounded-full border border-slate-700 bg-slate-900 px-3 py-2 font-bold">🪙 {formatNumber(coins)}</div>
         </div>
-        <section className="mt-5 rounded-2xl border border-slate-700 bg-slate-900 p-4">
-          <h2 className="font-bold">Como ganhar moedas</h2>
-          <p className="mt-1 text-sm text-slate-400">Conclua missões, focos, jejuns, vença monstros e resgate conquistas desbloqueadas.</p>
-          <Link href="/achievements" className="mt-3 block rounded-xl bg-violet-600 px-4 py-3 text-center text-sm font-bold">🏆 Ver conquistas para resgatar</Link>
-        </section>
-        <Section title="Equipamentos" description="Você pode equipar um item por slot: arma, armadura, botas, capa, elmo e acessórios." items={equipment} ownership={ownership} coins={coins} />
-        <Section title="Pets" description="Pets acompanham o personagem e ajudam na batalha com bônus próprios." items={pets} ownership={ownership} coins={coins} />
-        <Section title="Colecionáveis" description="Itens para dar mais cara de jogo ao seu personagem." items={cosmetics} ownership={ownership} coins={coins} />
+        <div className="mt-4 grid grid-cols-2 gap-2"><Link href="/inventory" className="rounded-xl border border-violet-700 px-3 py-3 text-center text-sm font-bold text-violet-200">🎒 Inventário</Link><Link href="/character" className="rounded-xl border border-violet-700 px-3 py-3 text-center text-sm font-bold text-violet-200">🧙 Personagem</Link></div>
+        <section className="mt-5 rounded-2xl border border-slate-700 bg-slate-900 p-4"><h2 className="font-bold">Como ganhar moedas</h2><p className="mt-1 text-sm text-slate-400">Conclua missões, focos, jejuns, vença monstros e resgate conquistas.</p><Link href="/achievements" className="mt-3 block rounded-xl bg-violet-600 px-4 py-3 text-center text-sm font-bold">🏆 Ver conquistas</Link></section>
+        <Section title="Armas" description="Aumentam dano e deixam a Arena mais rápida." items={weapons} ownership={ownership} coins={coins} />
+        <Section title="Armaduras e elmos" description="Aumentam defesa e ajudam em chefes difíceis." items={armor} ownership={ownership} coins={coins} />
+        <Section title="Botas e capas" description="Bônus híbridos para sobreviver em fases longas." items={mobility} ownership={ownership} coins={coins} />
+        <Section title="Acessórios" description="Pequenos bônus de dano, defesa ou crítico." items={accessories} ownership={ownership} coins={coins} />
+        <Section title="Pets" description="Companheiros que ajudam nas batalhas." items={pets} ownership={ownership} coins={coins} />
+        <Section title="Consumíveis" description="Itens aspiracionais para futuras mecânicas e boosts." items={consumables} ownership={ownership} coins={coins} />
+        <Section title="Cosméticos e temas" description="Itens visuais para dar personalidade ao AlyQuest." items={cosmetics} ownership={ownership} coins={coins} />
       </div>
     </main>
   );
 }
 
-export default function Page() {
-  return <Suspense fallback={<main className="p-6">Carregando...</main>}><Content /></Suspense>;
-}
+export default function Page() { return <Suspense fallback={<main className="p-6">Carregando loja...</main>}><Content /></Suspense>; }

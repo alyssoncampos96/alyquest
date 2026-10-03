@@ -12,8 +12,8 @@ export async function GET(request: NextRequest) {
     openapi: "3.1.0",
     info: {
       title: "AlyQuest Assistente",
-      version: "1.2.0",
-      description: "Ações autorizadas para usar o AlyQuest via IA: tarefas, finanças, jejum, loja e equipamentos.",
+      version: "1.4.0",
+      description: "Ações autorizadas para usar o AlyQuest via IA. Inclui criar/listar/concluir/adicionar estado de tarefas, listar/contar/resumir finanças, iniciar/finalizar/consultar jejum e gerenciar loja/inventário.",
     },
     servers: [{ url: origin }],
     paths: {
@@ -73,6 +73,17 @@ export async function GET(request: NextRequest) {
           responses: { "200": { description: "Lançamentos encontrados" }, ...errorResponses },
         },
       },
+
+      "/api/gpt/finance/count": {
+        post: {
+          operationId: "contarLancamentosFinanceiros",
+          summary: "Conta lançamentos financeiros e retorna saldo/resumo do período",
+          description: "Use para perguntas como 'quantos gastos tive em alimentação em setembro?' ou 'quantos lançamentos tenho este mês?'.",
+          security: auth,
+          requestBody: { required: false, content: { "application/json": { schema: { type: "object", additionalProperties: false, properties: { month: { type: "string", pattern: "^\\d{4}-\\d{2}$", description: "Mês YYYY-MM" }, category: { type: "string" } } } } } },
+          responses: { "200": { description: "Contagem e resumo" }, ...errorResponses },
+        },
+      },
       "/api/gpt/finance/summary": {
         post: {
           operationId: "consultarResumoFinanceiro",
@@ -99,8 +110,8 @@ export async function GET(request: NextRequest) {
       },
       "/api/gpt/tasks/create": {
         post: {
-          operationId: "criarMissao",
-          summary: "Cria uma missão no AlyQuest",
+          operationId: "criarTarefaOuMissao",
+          summary: "Cria uma tarefa/missão no AlyQuest",
           security: auth,
           requestBody: {
             required: true,
@@ -127,8 +138,8 @@ export async function GET(request: NextRequest) {
       },
       "/api/gpt/tasks/list": {
         post: {
-          operationId: "listarMissoes",
-          summary: "Lista missões do AlyQuest",
+          operationId: "listarTarefasOuMissoes",
+          summary: "Lista tarefas/missões do AlyQuest",
           security: auth,
           requestBody: {
             required: false,
@@ -150,8 +161,8 @@ export async function GET(request: NextRequest) {
       },
       "/api/gpt/tasks/complete": {
         post: {
-          operationId: "concluirMissao",
-          summary: "Conclui uma missão e aplica recompensas",
+          operationId: "concluirTarefaOuMissao",
+          summary: "Conclui uma tarefa/missão e aplica recompensas",
           description: "Use task_id quando souber o ID. Se usar query e houver mais de uma missão parecida, a resposta virá como ambiguous e o GPT deve perguntar qual concluir.",
           security: auth,
           requestBody: {
