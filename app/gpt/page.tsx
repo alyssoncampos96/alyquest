@@ -4,6 +4,16 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { GptTokenPanel } from "@/components/gpt-token-panel";
 
+const abilities = [
+  "Registrar despesa ou receita: “registra almoço de R$45 hoje”.",
+  "Listar lançamentos por mês, categoria e tipo.",
+  "Consultar resumo financeiro com despesas, receitas, saldo e categorias.",
+  "Criar missões com categoria, prioridade, horas e prazo.",
+  "Listar missões de hoje, pendentes, atrasadas ou todas.",
+  "Concluir missão aplicando XP, moedas, dano no chefe e atualização da planilha quando houver vínculo.",
+  "Iniciar, consultar e finalizar jejum pelo GPT.",
+];
+
 async function Content() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -19,12 +29,18 @@ async function Content() {
         <p className="mt-1 text-sm text-slate-400">Conecte uma conversa do ChatGPT ao AlyQuest.</p>
         <div className="mt-5"><GptTokenPanel openApiUrl={openApiUrl} /></div>
         <section className="mt-5 rounded-2xl border border-slate-700 bg-slate-900 p-4">
+          <h2 className="font-bold">O Assistente pode fazer</h2>
+          <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-slate-300">
+            {abilities.map(item => <li key={item}>{item}</li>)}
+          </ul>
+        </section>
+        <section className="mt-5 rounded-2xl border border-slate-700 bg-slate-900 p-4">
           <h2 className="font-bold">Configuração</h2>
           <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-300">
             <li>Crie um GPT personalizado no ChatGPT.</li>
             <li>Adicione uma ação com o schema acima.</li>
             <li>Configure autenticação Bearer e cole o token gerado aqui.</li>
-            <li>Peça algo como: registrar almoço de 45 reais hoje.</li>
+            <li>Teste com: “registrar almoço de 45 reais hoje” ou “listar minhas despesas de outubro”.</li>
           </ol>
         </section>
         <section className="mt-5 space-y-2">

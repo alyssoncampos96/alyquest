@@ -1,14 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAnonClient } from "@/lib/supabase/anon";
-
-function getToken(request: NextRequest) {
-  const header = request.headers.get("authorization") ?? "";
-  const [type, token] = header.split(/\s+/);
-  return type?.toLowerCase() === "bearer" ? token : "";
-}
+import { getBearerToken } from "@/lib/gpt-auth";
 
 export async function POST(request: NextRequest) {
-  const token = getToken(request);
+  const token = getBearerToken(request);
   if (!token) return NextResponse.json({ error: "Token ausente." }, { status: 401 });
   let body: Record<string, unknown>;
   try {
@@ -26,7 +21,7 @@ export async function POST(request: NextRequest) {
     p_token: token,
     p_title: String(body.title).trim(),
     p_amount: amount,
-    p_kind: "expense",
+    p_kind: String(body.kind ?? "expense"),
     p_category: String(body.category ?? "Outros").trim() || "Outros",
     p_occurred_on: occurred,
     p_payment_method: String(body.payment_method ?? "other"),
