@@ -8,6 +8,17 @@ import { ArenaGame } from "@/components/arena-game";
 
 type ArenaItem = { name: string; icon: string; damage_bonus: number | string; item_type?: string | null; battle_slot?: string | null; pet_ability?: string | null };
 
+const legacyMonsterMap: Record<string, string> = {
+  "training-slime": "level-1-wolf",
+  "habit-goblin": "level-1-goblin",
+  "chaos-ogre": "level-2-ogre",
+  "deadline-dragon": "level-3-dragon",
+};
+
+function normalizeArenaVictoryIds(rows: { monster_id: string }[] | null) {
+  return [...new Set((rows ?? []).map(row => legacyMonsterMap[row.monster_id] ?? row.monster_id))];
+}
+
 async function Content() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -22,7 +33,7 @@ async function Content() {
   const equippedAll = (equipped ?? []).map(row => Array.isArray(row.items) ? row.items[0] : row.items).filter(Boolean) as ArenaItem[];
   const pets = equippedAll.filter(item => item.item_type === "pet");
   const equippedItems = equippedAll.filter(item => item.item_type !== "pet");
-  const defeatedMonsterIds = [...new Set((victories ?? []).map(row => row.monster_id as string))];
+  const defeatedMonsterIds = normalizeArenaVictoryIds(victories ?? []);
   return (
     <main className="min-h-screen px-4 pb-28 pt-6">
       <div className="mx-auto max-w-md">
