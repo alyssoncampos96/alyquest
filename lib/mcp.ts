@@ -6,6 +6,7 @@ export type Tool = {
   annotations: { readOnlyHint: boolean; destructiveHint: boolean; openWorldHint: boolean };
 };
 type Dependencies = {
+  challenge?: string;
   tools: Tool[];
   authenticate: (token: string) => Promise<boolean>;
   call: (name: string, args: Record<string, unknown>, token: string) => Promise<Response>;
@@ -38,9 +39,9 @@ export function createMcpHandler(deps: Dependencies) {
     const origin = request.headers.get("origin");
     if (origin && origin !== new URL(request.url).origin) return fail(null, -32000, "Origem não permitida.", 403);
     const match = /^Bearer\s+(\S+)$/i.exec(request.headers.get("authorization") ?? "");
-    if (!match) return new Response(null, { status: 401, headers: { ...headers, "WWW-Authenticate": "Bearer" } });
+    if (!match) return new Response(null, { status: 401, headers: { ...headers, "WWW-Authenticate": deps.challenge ?? "Bearer" } });
     try {
-      if (!await deps.authenticate(match[1])) return new Response(null, { status: 401, headers: { ...headers, "WWW-Authenticate": "Bearer" } });
+      if (!await deps.authenticate(match[1])) return new Response(null, { status: 401, headers: { ...headers, "WWW-Authenticate": deps.challenge ?? "Bearer" } });
     } catch { return fail(null, -32603, "Não foi possível validar a autenticação.", 503); }
     if (request.method !== "POST") return new Response(null, { status: 405, headers: { ...headers, Allow: "POST" } });
     const version = request.headers.get("mcp-protocol-version");

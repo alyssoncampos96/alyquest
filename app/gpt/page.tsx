@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { headers } from "next/headers";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
@@ -27,6 +28,7 @@ async function Content() {
       <div className="mx-auto max-w-md">
         <h1 className="text-2xl font-black">GPT</h1>
         <p className="mt-1 text-sm text-slate-400">Conecte uma conversa do ChatGPT ao AlyQuest.</p>
+        <Link href="/oauth/connections" className="mt-5 block rounded-xl border border-violet-600 p-3">Conexões com ChatGPT →</Link>
         <div className="mt-5"><GptTokenPanel openApiUrl={openApiUrl} /></div>
         <section className="mt-5 rounded-2xl border border-slate-700 bg-slate-900 p-4">
           <h2 className="font-bold">O Assistente pode fazer</h2>

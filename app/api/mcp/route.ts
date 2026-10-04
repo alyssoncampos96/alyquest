@@ -1,3 +1,4 @@
+import { MCP_CHALLENGE } from "@/lib/mcp-oauth";
 import { NextRequest } from "next/server";
 import { GET as openapi } from "@/app/api/gpt/openapi/route";
 import { createAnonClient } from "@/lib/supabase/anon";
@@ -51,6 +52,7 @@ export async function POST(request: NextRequest) {
   });
   return createMcpHandler({
     tools,
+    challenge: MCP_CHALLENGE,
     authenticate: async token => {
       const { data, error } = await createAnonClient().rpc("aq_gpt_fasting_status", { p_token: token });
       if (error && error.code !== "P0001") throw new Error("Authentication unavailable");

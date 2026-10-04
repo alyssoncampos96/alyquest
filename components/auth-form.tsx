@@ -1,4 +1,5 @@
 "use client";
+import { safeNext } from "@/lib/supabase/redirect";
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -20,7 +21,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        router.replace("/"); router.refresh();
+        router.replace(safeNext(new URLSearchParams(location.search).get("next"))); router.refresh();
       } else if (mode === "sign-up") {
         const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${location.origin}/auth/callback` } });
         if (error) throw error;

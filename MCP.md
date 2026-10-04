@@ -8,7 +8,7 @@ As 15 ferramentas são derivadas do OpenAPI local e executam diretamente os hand
 
 ## Conectar
 
-Use mcp.json na configuração do plugin. Configure o Bearer Token no campo seguro de autenticação da conexão. O arquivo não contém token. Não coloque credenciais em arquivos, prompts ou na URL. O mcp.json sozinho não configura autenticação.
+Use mcp.json na configuração do plugin. No ChatGPT, conecte usando OAuth. O host descobrirá os endpoints de autenticação, abrirá a tela do AlyQuest e solicitará autorização. Entre com sua conta e use “Conectar minha conta”. Não coloque credenciais em arquivos, prompts ou na URL. Tokens Bearer antigos continuam válidos para clientes que aceitam credenciais diretas. O mcp.json não contém credenciais.
 
 ## Verificar
 
@@ -18,4 +18,12 @@ Para chamadas MCP, envie POST com Content-Type: application/json e Accept: appli
 
 ## Publicar na Vercel
 
-Execute npm test, npm run lint e npm run build. Envie a branch codex/alyquest-doc-adjustments ao repositório; a Vercel cria um Preview. Quando estiver Ready, use Promote to Production no projeto alyquestv3. Preserve as variáveis de Supabase existentes. Não há nova variável secreta, dependência ou migração para o MCP. Evite atualizar main: a documentação anterior informa que ela também publica outros projetos.
+Execute npm test, npm run lint e npm run build. Envie a branch codex/alyquest-doc-adjustments ao repositório; a Vercel cria um Preview. Quando estiver Ready, use Promote to Production no projeto alyquestv3. Preserve as variáveis de Supabase existentes. Não há nova variável secreta ou dependência. O login OAuth exige aplicar supabase/migrations/202610040100_mcp_oauth.sql antes de publicar a versão com OAuth. Evite atualizar main: a documentação anterior informa que ela também publica outros projetos.
+
+## Login OAuth no ChatGPT
+
+A descoberta RFC 9728 está em /.well-known/oauth-protected-resource/api/mcp; o desafio WWW-Authenticate aponta para ela. A descoberta RFC 8414 está em /.well-known/oauth-authorization-server. O servidor aceita código de autorização com PKCE S256 e emite tokens opacos vinculados ao cliente e ao recurso https://alyquestv3.vercel.app/api/mcp. Códigos duram cinco minutos e só podem ser trocados uma vez. Access tokens duram uma hora; refresh tokens são rotacionados a cada uso e expiram em 90 dias. Somente hashes dos códigos e tokens são armazenados. A integração aceita somente callbacks HTTPS oficiais do ChatGPT, validando o redirect registrado em cada etapa.
+
+A autorização acontece na tela /oauth/authorize, com sessão autenticada do AlyQuest e decisão explícita do usuário. A opção /oauth/connections permite desconectar, revogando o access token e a renovação. O login preserva um destino interno seguro para retornar à autorização. Os tokens antigos têm expires_at nulo e continuam com o comportamento anterior. O RPC financeiro antigo agora usa o mesmo validador para respeitar validade e revogação.
+
+Testes SQL em supabase/tests/mcp-oauth-rollback.sql verificam PKCE, autenticação do cliente, vinculação ao recurso, replay, renovação, validade, revogação e privilégios. Todos os registros usados nesses testes são desfeitos por rollback.
