@@ -6,8 +6,8 @@ import {RecurrenceFields} from './recurrence-fields';
 import {saveMission} from '@/app/planning-actions';
 import {defaults,field,type Module} from '@/lib/planning';
 import type {BossOption} from './mission-form';
-export function WorkoutBuilder({date,modules,bosses}:{date:string;modules:Module[];bosses:BossOption[]}){
- const [selected,setSelected]=useState<string[]>([]),[scheduledDate,setScheduledDate]=useState(date);
+export function WorkoutBuilder({date,modules,bosses,initialModuleIds=[]}:{date:string;modules:Module[];bosses:BossOption[];initialModuleIds?:string[]}){
+ const [selected,setSelected]=useState<string[]>(initialModuleIds),[scheduledDate,setScheduledDate]=useState(date);
  const choices=[...modules,...defaults];const chosen=choices.filter(m=>selected.includes(m.id));
  const steps=chosen.flatMap(m=>m.steps.map((s,i)=>({...s,id:`${m.id}-${i}`,done:false,actual:''})));
  function cards(items:Module[]){return <div className="mt-3 grid grid-cols-2 gap-2">{items.map(m=>{const active=selected.includes(m.id);return <button key={m.id} type="button" aria-pressed={active} onClick={()=>setSelected(active?selected.filter(id=>id!==m.id):[...selected,m.id])} className={`min-w-0 rounded-2xl border p-3 text-left ${active?'border-violet-400 bg-violet-900/50':'border-slate-700 bg-slate-900'}`}><span className="block text-sm font-semibold">{active?'✓ ':''}{m.name}</span><span className="mt-1 block text-xs text-slate-400">{m.steps.length} exercício{m.steps.length===1?'':'s'}</span></button>;})}</div>;}
