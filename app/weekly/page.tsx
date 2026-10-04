@@ -6,7 +6,7 @@ import { addDays, dateFmt, money, saoDate, soft, sum } from "@/lib/life-dashboar
 
 type Task = { id: string; title: string; category: string | null; status: string; completed_at: string | null; due_date: string | null; estimated_hours: number | string | null };
 type Tx = { id: string; title: string; amount: number | string; kind: string; category: string | null; occurred_on: string };
-type Focus = { focus_completed: boolean; break_completed: boolean; created_at: string };
+type Focus = { focus_completed: boolean; break_completed: boolean; completed_at: string };
 type Fast = { started_at: string; ended_at: string | null; reward_coins?: number | string | null; reward_xp?: number | string | null };
 
 function dayKey(value?: string | null) { return value ? value.slice(0, 10) : ""; }
@@ -20,7 +20,7 @@ export default async function Page() {
   const [tasks, txs, focus, fasts, battles] = await Promise.all([
     soft<Task[]>(supabase.from("tasks").select("id,title,category,status,completed_at,due_date,estimated_hours").eq("user_id", user.id).or(`completed_at.gte.${start},due_date.gte.${start}`), []),
     soft<Tx[]>(supabase.from("aq_finance_transactions").select("id,title,amount,kind,category,occurred_on").eq("user_id", user.id).gte("occurred_on", start).lte("occurred_on", end), []),
-    soft<Focus[]>(supabase.from("pomodoro_sessions").select("focus_completed,break_completed,created_at").eq("user_id", user.id).gte("created_at", `${start}T00:00:00`), []),
+    soft<Focus[]>(supabase.from("pomodoro_sessions").select("focus_completed,break_completed,completed_at").eq("user_id", user.id).gte("completed_at", `${start}T00:00:00`), []),
     soft<Fast[]>(supabase.from("aq_fasting_sessions").select("started_at,ended_at,reward_xp,reward_coins").eq("user_id", user.id).gte("started_at", `${start}T00:00:00`), []),
     soft<{ id: string; defeated_at?: string; created_at?: string }[]>(supabase.from("aq_arena_battles").select("id,created_at").eq("user_id", user.id).gte("created_at", `${start}T00:00:00`), []),
   ]);
@@ -34,7 +34,7 @@ export default async function Page() {
     <section className="mt-5 grid grid-cols-2 gap-3">
       <Card label="Tarefas concluídas" value={done.length}/><Card label="Focos completos" value={focusCount}/><Card label="Jejuns registrados" value={fasts.length}/><Card label="Vitórias na arena" value={battles.length}/><Card label="Entradas" value={money.format(income)}/><Card label="Saídas" value={money.format(expense)}/>
     </section>
-    <section className="mt-6 space-y-2"><h2 className="font-black">Ritmo da semana</h2>{days.map(day => { const label = dateFmt.format(new Date(`${day}T12:00:00-03:00`)); const dayTasks = done.filter(t => dayKey(t.completed_at) === day).length; const dayFocus = focus.filter(f => dayKey(f.created_at) === day && f.focus_completed).length; const dayTx = txs.filter(t => t.occurred_on === day).length; const active = dayTasks + dayFocus + dayTx + fasts.filter(f => dayKey(f.started_at) === day || dayKey(f.ended_at) === day).length; return <div key={day} className="rounded-2xl border border-slate-800 bg-slate-900 p-3"><div className="flex items-center justify-between"><p className="font-bold">{label}</p><span className={active ? "text-emerald-300" : "text-slate-500"}>{active ? "ativo" : "sem registro"}</span></div><p className="mt-1 text-xs text-slate-400">{dayTasks} tarefas · {dayFocus} focos · {dayTx} lançamentos</p></div>; })}</section>
+    <section className="mt-6 space-y-2"><h2 className="font-black">Ritmo da semana</h2>{days.map(day => { const label = dateFmt.format(new Date(`${day}T12:00:00-03:00`)); const dayTasks = done.filter(t => dayKey(t.completed_at) === day).length; const dayFocus = focus.filter(f => dayKey(f.completed_at) === day && f.focus_completed).length; const dayTx = txs.filter(t => t.occurred_on === day).length; const active = dayTasks + dayFocus + dayTx + fasts.filter(f => dayKey(f.started_at) === day || dayKey(f.ended_at) === day).length; return <div key={day} className="rounded-2xl border border-slate-800 bg-slate-900 p-3"><div className="flex items-center justify-between"><p className="font-bold">{label}</p><span className={active ? "text-emerald-300" : "text-slate-500"}>{active ? "ativo" : "sem registro"}</span></div><p className="mt-1 text-xs text-slate-400">{dayTasks} tarefas · {dayFocus} focos · {dayTx} lançamentos</p></div>; })}</section>
     <section className="mt-6 rounded-3xl border border-slate-800 bg-slate-900 p-5"><h2 className="font-black">Atalhos</h2><div className="mt-3 grid grid-cols-2 gap-2 text-sm"><Link className="rounded-xl border border-slate-700 p-3" href="/journeys">🗺️ Jornadas</Link><Link className="rounded-xl border border-slate-700 p-3" href="/daily">✨ Diárias</Link><Link className="rounded-xl border border-slate-700 p-3" href="/budget">💰 Orçamento</Link><Link className="rounded-xl border border-slate-700 p-3" href="/review">🌙 Revisão</Link></div></section>
   </div></main>;
 }
