@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { saveNotificationRule, toggleNotificationRule } from "@/app/notification-actions";
+import { deleteNotificationRule, saveNotificationRule, toggleNotificationRule } from "@/app/notification-actions";
 import { NotificationPermission } from "@/components/notification-permission";
 import { formatWeekdays, phraseFor } from "@/lib/notification-copy";
 
@@ -61,6 +61,9 @@ async function Content() {
                 </form>
               </div>
               <p className="mt-3 rounded-xl bg-slate-950 p-3 text-sm text-violet-100">{phraseFor(rule.phrase_index ?? 0)}</p>
+              <form action={deleteNotificationRule.bind(null, rule.id)} className="mt-3 text-right">
+                <button className="rounded-xl border border-red-900 px-3 py-2 text-xs font-bold text-red-300">Excluir lembrete</button>
+              </form>
             </article>
           ))}
           {rulesReady && !rules.length && <p className="rounded-2xl border border-slate-800 p-4 text-sm text-slate-400">Nenhum lembrete criado ainda.</p>}

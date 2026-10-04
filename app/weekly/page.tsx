@@ -30,7 +30,7 @@ export default async function Page() {
   const expense = sum(txs.filter(t => t.kind === "expense"), t => t.amount);
   const income = sum(txs.filter(t => t.kind === "income"), t => t.amount);
   return <main className="min-h-screen px-4 pb-28 pt-6"><div className="mx-auto max-w-md">
-    <div className="flex items-center justify-between gap-3"><div><h1 className="text-2xl font-black">Dashboard semanal</h1><p className="mt-1 text-sm text-slate-400">Últimos 7 dias de missões, foco, jejum, finanças e arena.</p></div><Link href="/planning" className="rounded-xl bg-violet-600 px-3 py-2 text-sm font-bold">Planejar</Link></div>
+    <div className="flex items-center justify-between gap-3"><div><h1 className="text-2xl font-black">Dashboard semanal</h1><p className="mt-1 text-sm text-slate-400">Últimos 7 dias de missões, foco, jejum, finanças e arena.</p></div><Link href="/planning" className="rounded-xl bg-violet-600 px-3 py-2 text-sm font-bold">Meu dia</Link></div>
     <section className="mt-5 grid grid-cols-2 gap-3">
       <Card label="Tarefas concluídas" value={done.length}/><Card label="Focos completos" value={focusCount}/><Card label="Jejuns registrados" value={fasts.length}/><Card label="Vitórias na arena" value={battles.length}/><Card label="Entradas" value={money.format(income)}/><Card label="Saídas" value={money.format(expense)}/>
     </section>

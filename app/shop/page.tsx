@@ -6,6 +6,8 @@ import { formatNumber } from "@/lib/game";
 import Link from "next/link";
 import { ItemCard } from "@/components/item-card";
 import { itemSlot, itemType, type ShopItem } from "@/lib/items";
+import { buyArenaPotionForm } from "@/app/arena-actions";
+import { ActionForm } from "@/components/action-form";
 
 type UserItem = { item_id: string; equipped: boolean };
 
@@ -47,7 +49,13 @@ async function Content() {
         <Section title="Botas e capas" description="Bônus híbridos para sobreviver em fases longas." items={mobility} ownership={ownership} coins={coins} />
         <Section title="Acessórios" description="Pequenos bônus de dano, defesa ou crítico." items={accessories} ownership={ownership} coins={coins} />
         <Section title="Pets" description="Companheiros que ajudam nas batalhas." items={pets} ownership={ownership} coins={coins} />
-        <Section title="Consumíveis" description="Itens aspiracionais para futuras mecânicas e boosts." items={consumables} ownership={ownership} coins={coins} />
+        <section className="mt-6 rounded-2xl border border-emerald-700 bg-slate-900 p-4">
+          <h2 className="font-black">🧪 Poção de vida</h2>
+          <p className="mt-1 text-sm text-slate-300">Recupera 25 HP na Arena. Seu HP também regenera 1 ponto por hora.</p>
+          <ActionForm action={buyArenaPotionForm} className="mt-3"><button disabled={coins<10} className="w-full rounded-xl bg-emerald-700 p-3 font-bold disabled:opacity-50">Comprar poção · 10 🪙</button></ActionForm>
+          <Link href="/arena" className="mt-2 block text-center text-sm text-emerald-300">Ver HP e usar na Arena →</Link>
+        </section>
+        <Section title="Consumíveis" description="Boosts de batalha e outros itens colecionáveis." items={consumables} ownership={ownership} coins={coins} />
         <Section title="Cosméticos e temas" description="Itens visuais para dar personalidade ao AlyQuest." items={cosmetics} ownership={ownership} coins={coins} />
       </div>
     </main>

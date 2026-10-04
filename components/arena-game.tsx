@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { claimArenaVictory } from "@/app/arena-actions";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { buyArenaPotion, claimArenaVictory, takeArenaDamage, drinkArenaPotion, type ArenaHealth } from "@/app/arena-actions";
 import { arenaMonsters, type ArenaMonster, unlockedArenaMonsters } from "@/lib/arena";
 
 export type EquippedItem = { id?: string; name: string; icon: string; damage_bonus: number | string; item_type?: string | null; battle_slot?: string | null; rarity?: string | null; effect?: string | null; defense_bonus?: number | string | null; crit_bonus?: number | string | null };
@@ -32,13 +32,16 @@ function teamFor(monster: ArenaMonster): EnemyUnit[] {
   }));
 }
 
-export function ArenaGame({ level, equippedItems, pets, consumables, defeatedMonsterIds }: { level: number; equippedItems: EquippedItem[]; pets: PetItem[]; consumables: ConsumableItem[]; defeatedMonsterIds: string[] }) {
+export function ArenaGame({ level, equippedItems, pets, consumables, defeatedMonsterIds, initialHealth, initialPotions }: { level: number; equippedItems: EquippedItem[]; pets: PetItem[]; consumables: ConsumableItem[]; defeatedMonsterIds: string[]; initialHealth: ArenaHealth; initialPotions: number }) {
   const defeatedSet = useMemo(() => new Set(defeatedMonsterIds), [defeatedMonsterIds]);
   const defeatedCount = defeatedMonsterIds.length;
   const availableMonsters = useMemo(() => unlockedArenaMonsters(defeatedCount).filter(item => !defeatedSet.has(item.id)).slice(0, 8), [defeatedCount, defeatedSet]);
   const nextLocked = arenaMonsters.find(item => !defeatedSet.has(item.id) && !availableMonsters.some(monster => monster.id === item.id));
   const [monster, setMonster] = useState<ArenaMonster | null>(availableMonsters[0] ?? null);
-  const [heroHp, setHeroHp] = useState(0);
+  const [heroHp, setHeroHp] = useState(initialHealth.current_hp);
+  const [nextHpAt, setNextHpAt] = useState(initialHealth.next_hp_at);
+  const [potions, setPotions] = useState(initialPotions);
+  const [clock, setClock] = useState(Date.now());
   const [enemies, setEnemies] = useState<EnemyUnit[]>([]);
   const [started, setStarted] = useState(false);
   const [finished, setFinished] = useState<"win" | "lose" | null>(null);
@@ -61,7 +64,7 @@ export function ArenaGame({ level, equippedItems, pets, consumables, defeatedMon
     return {
       bonus,
       selectedConsumable,
-      maxHp: 55 + level * 8 + equippedItems.length * 6 + pets.length * 8 + Math.round(rawDefense * 80) + (selectedConsumable ? 10 : 0),
+      maxHp: 55 + level * 8 + equippedItems.length * 6 + pets.length * 8 + Math.round(rawDefense * 80),
       attackMin: 7 + level + Math.round(bonus * 34),
       attackMax: 14 + level * 2 + Math.round(bonus * 92),
       defense: Math.min(65, equippedItems.length * 2 + pets.length * 2 + Math.round(bonus * 16 + rawDefense * 70)),
@@ -69,15 +72,31 @@ export function ArenaGame({ level, equippedItems, pets, consumables, defeatedMon
     };
   }, [consumables, equippedItems, level, pets, selectedConsumableId]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  useEffect(() => {
+    if (!nextHpAt || heroHp >= stats.maxHp || clock < new Date(nextHpAt).getTime()) return;
+    const gained = 1 + Math.floor((clock - new Date(nextHpAt).getTime()) / 3_600_000);
+    const updatedHp = Math.min(stats.maxHp, heroHp + gained);
+    setHeroHp(updatedHp);
+    setNextHpAt(updatedHp === stats.maxHp ? null : new Date(new Date(nextHpAt).getTime() + gained * 3_600_000).toISOString());
+  }, [clock, heroHp, nextHpAt, stats.maxHp]);
+
+  const nextRecovery = nextHpAt && heroHp < stats.maxHp
+    ? Math.max(0, Math.ceil((new Date(nextHpAt).getTime() - clock) / 60_000))
+    : null;
+
   function append(text: string, tone: BattleLog["tone"] = "neutral") {
     setLog(items => [{ id: `${Date.now()}-${Math.random()}`, text, tone }, ...items].slice(0, 12));
   }
 
   function startBattle(target = monster) {
     if (!target) return;
+    if (heroHp <= 0) { setError("Seu HP está zerado. Aguarde recuperar 1 HP ou use uma poção."); return; }
     const nextTeam = teamFor(target);
     setMonster(target);
-    setHeroHp(stats.maxHp);
     setEnemies(nextTeam);
     setStarted(true);
     setFinished(null);
@@ -132,12 +151,39 @@ export function ArenaGame({ level, equippedItems, pets, consumables, defeatedMon
       incomingTotal += incoming;
       append(`${monsterCrit ? "CRÍTICO do oponente! " : ""}${enemy.name} causou ${incoming} de dano.`, "bad");
     }
-    const nextHeroHp = Math.max(0, heroHp - incomingTotal);
-    setHeroHp(nextHeroHp);
-    if (nextHeroHp <= 0) {
-      setFinished("lose");
-      append("Você recuou para se recuperar. Equipe itens melhores e tente de novo.", "bad");
-    }
+    startTransition(async () => {
+      try {
+        const state = await takeArenaDamage(stats.maxHp, incomingTotal);
+        setHeroHp(state.current_hp);
+        setNextHpAt(state.next_hp_at);
+        if (state.current_hp <= 0) {
+          setFinished("lose");
+          append("Seu HP zerou. Ele volta 1 ponto por hora, ou você pode usar uma poção.", "bad");
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : safeText(err));
+      }
+    });
+  }
+
+  function buyPotion() {
+    startTransition(async () => {
+      try { setPotions(await buyArenaPotion()); setError(""); setReward("Poção comprada por 10 moedas."); }
+      catch (err) { setError(err instanceof Error ? err.message : safeText(err)); }
+    });
+  }
+
+  function drinkPotion() {
+    startTransition(async () => {
+      try {
+        const state = await drinkArenaPotion(stats.maxHp);
+        setHeroHp(state.current_hp);
+        setNextHpAt(state.next_hp_at);
+        setPotions(state.potions ?? 0);
+        setError("");
+        setReward(`Poção usada: HP ${state.current_hp}/${stats.maxHp}.`);
+      } catch (err) { setError(err instanceof Error ? err.message : safeText(err)); }
+    });
   }
 
   return (
@@ -148,11 +194,23 @@ export function ArenaGame({ level, equippedItems, pets, consumables, defeatedMon
           <div className="text-4xl">🧙🏻‍♂️</div>
         </div>
         <div className="mt-4 grid grid-cols-4 gap-2 text-center text-xs">
-          <div className="rounded-2xl bg-slate-950 p-3"><p className="text-slate-400">HP</p><p className="font-bold">{stats.maxHp}</p></div>
+          <div className="rounded-2xl bg-slate-950 p-3"><p className="text-slate-400">HP</p><p className="font-bold">{heroHp}/{stats.maxHp}</p></div>
           <div className="rounded-2xl bg-slate-950 p-3"><p className="text-slate-400">Ataque</p><p className="font-bold">{stats.attackMin}-{stats.attackMax}</p></div>
           <div className="rounded-2xl bg-slate-950 p-3"><p className="text-slate-400">Def/Crít</p><p className="font-bold">{stats.defense}/{Math.round(stats.critChance * 100)}%</p></div>
           <div className="rounded-2xl bg-slate-950 p-3"><p className="text-slate-400">Vitórias</p><p className="font-bold">{defeatedCount}</p></div>
         </div>
+      </div>
+
+      <div className="rounded-2xl border border-emerald-800 bg-slate-900 p-4 text-sm">
+        <h3 className="font-bold">💚 Vida do personagem</h3>
+        <p className="mt-1 text-slate-300">O dano permanece entre batalhas. Recupera 1 HP por hora{nextRecovery !== null ? ` · próximo ponto em ${Math.floor(nextRecovery / 60)}h ${String(nextRecovery % 60).padStart(2,"0")}min` : ""}.</p>
+        <p className="mt-2 font-semibold">Poções: {potions} · cada uma recupera 25 HP</p>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button disabled={pending} onClick={buyPotion} className="rounded-xl border border-emerald-600 p-2 font-bold disabled:opacity-50">Comprar · 10 🪙</button>
+          <button disabled={pending || !potions || heroHp >= stats.maxHp} onClick={drinkPotion} className="rounded-xl bg-emerald-700 p-2 font-bold disabled:opacity-50">Usar poção</button>
+        </div>
+        {reward && !started && <p className="mt-2 text-emerald-300">{reward}</p>}
+        {error && !started && <p role="alert" className="mt-2 text-red-300">{error}</p>}
       </div>
 
       {availableMonsters.length ? <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -175,7 +233,7 @@ export function ArenaGame({ level, equippedItems, pets, consumables, defeatedMon
             <div className="relative z-10 grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1.65fr)] items-end gap-2">
               <div className="min-w-0">
                 <div className={`mb-2 text-center text-5xl transition-transform duration-300 sm:text-6xl ${heroPulse ? "translate-x-5 scale-110" : ""}`} aria-label="Personagem Aly">🧙🏻‍♂️</div>
-                <div className="rounded-xl border border-slate-700 bg-slate-950/90 p-2 text-[11px]"><div className="flex flex-wrap justify-between gap-x-1"><span>Aly</span><span>{started ? heroHp : stats.maxHp}/{stats.maxHp}</span></div><div className="mt-1 h-2 rounded bg-slate-800"><div className="h-2 rounded bg-emerald-500" style={{ width: pct(started ? heroHp : stats.maxHp, stats.maxHp) }} /></div></div>
+                <div className="rounded-xl border border-slate-700 bg-slate-950/90 p-2 text-[11px]"><div className="flex flex-wrap justify-between gap-x-1"><span>Aly</span><span>{heroHp}/{stats.maxHp}</span></div><div className="mt-1 h-2 rounded bg-slate-800"><div className="h-2 rounded bg-emerald-500" style={{ width: pct(heroHp, stats.maxHp) }} /></div></div>
               </div>
               <div className="flex min-w-0 items-end justify-end gap-1 sm:gap-2">
                 {(enemies.length ? enemies : teamFor(monster)).map(enemy => <div key={enemy.id} className={`min-w-0 flex-1 text-center transition-transform duration-300 sm:max-w-28 ${enemyPulse === enemy.id ? "-translate-x-3 scale-110" : ""} ${enemy.hp <= 0 ? "opacity-30 grayscale" : ""}`}><div className="mb-2 text-5xl sm:text-6xl" aria-label={enemy.name}>{enemy.icon}</div><div className="rounded-xl border border-slate-700 bg-slate-950/90 p-2 text-[11px]"><div className="truncate" title={enemy.name}>{enemy.name}</div><div className="mt-1 h-2 rounded bg-slate-800"><div className="h-2 rounded bg-rose-500" style={{ width: pct(enemy.hp, enemy.maxHp) }} /></div><div className="mt-1 text-slate-400">{enemy.hp}/{enemy.maxHp}</div></div></div>)}

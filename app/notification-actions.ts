@@ -41,3 +41,7 @@ export async function saveNotificationRule(form: FormData) {
 export async function toggleNotificationRule(id: string, active: boolean) {
   await invoke("aq_toggle_notification_rule", { p_id: id, p_active: active });
 }
+
+export async function deleteNotificationRule(id: string) {
+  await invoke("aq_delete_notification_rule", { p_id: id });
+}

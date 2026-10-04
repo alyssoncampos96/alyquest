@@ -13,3 +13,17 @@ body.theme-cyberpunk{background:radial-gradient(700px 360px at 80% 0,rgba(236,72
 body.theme-medieval{background:radial-gradient(700px 360px at 50% -100px,rgba(245,158,11,.22),transparent 65%),linear-gradient(180deg,#140d07,#080a13)}
 body.theme-gym{background:radial-gradient(700px 360px at 50% -100px,rgba(239,68,68,.25),transparent 65%),linear-gradient(180deg,#130909,#080a13)}
 body.theme-finance{background:radial-gradient(700px 360px at 50% -100px,rgba(16,185,129,.22),transparent 65%),linear-gradient(180deg,#06120f,#080a13)}
+
+body.theme-forest{--aq-panel:#10271f;--aq-deep:#071b15;--aq-border:#315443;--aq-accent:#168d61;--aq-highlight:#c1f7da}
+body.theme-cyberpunk{--aq-panel:#17162f;--aq-deep:#0c1025;--aq-border:#4b4576;--aq-accent:#a33ccd;--aq-highlight:#f3c6fa}
+body.theme-medieval{--aq-panel:#281b16;--aq-deep:#1c120d;--aq-border:#725636;--aq-accent:#a86a27;--aq-highlight:#f7dea9}
+body.theme-gym{--aq-panel:#271519;--aq-deep:#190d11;--aq-border:#673540;--aq-accent:#b73546;--aq-highlight:#ffd1d4}
+body.theme-finance{--aq-panel:#0e2b27;--aq-deep:#061d1a;--aq-border:#2b625a;--aq-accent:#0b9279;--aq-highlight:#c2fff0}
+body[class*="theme-"]:not(.theme-default) [class~="bg-slate-900"]{background-color:var(--aq-panel)}
+body[class*="theme-"]:not(.theme-default) [class~="bg-slate-950"]{background-color:var(--aq-deep)}
+body[class*="theme-"]:not(.theme-default) [class~="border-slate-700"],
+body[class*="theme-"]:not(.theme-default) [class~="border-slate-800"]{border-color:var(--aq-border)}
+body[class*="theme-"]:not(.theme-default) [class~="bg-violet-600"]{background-color:var(--aq-accent)}
+body[class*="theme-"]:not(.theme-default) [class~="text-violet-300"],
+body[class*="theme-"]:not(.theme-default) [class~="text-violet-200"]{color:var(--aq-highlight)}
+body[class*="theme-"]:not(.theme-default) nav.fixed{background-color:var(--aq-deep);border-color:var(--aq-border)}

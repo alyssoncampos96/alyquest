@@ -60,6 +60,12 @@ async function Content() {
   const equippedAll = (equipped ?? []).map(row => Array.isArray(row.items) ? row.items[0] : row.items).filter(Boolean) as ArenaItem[];
   const pets = equippedAll.filter(item => item.item_type === "pet");
   const equippedItems = equippedAll.filter(item => item.item_type !== "pet");
+  const rawDefense = equippedItems.reduce((sum,item)=>sum+Number(item.defense_bonus??0),0);
+  const maxHp = 55 + level * 8 + equippedItems.length * 6 + pets.length * 8 + Math.round(rawDefense * 80);
+  const healthResult = await supabase.rpc("aq_arena_health_snapshot", { p_max_hp: maxHp });
+  checked(healthResult);
+  const potionsResult = await supabase.from("aq_arena_potions").select("quantity").eq("user_id",user.id).maybeSingle();
+  checked(potionsResult);
   const usedConsumables = new Set((consumableUseResult.error ? [] : consumableUseResult.data ?? []).map((row) => row.item_id));
   const consumableResult = await supabase
     .from("user_items")
@@ -79,7 +85,7 @@ async function Content() {
           </div>
           <Link href="/shop" className="rounded-xl border border-violet-700 px-3 py-2 text-sm font-bold text-violet-200">Loja</Link>
         </div>
-        <ArenaGame level={level} equippedItems={equippedItems} pets={pets} consumables={consumables} defeatedMonsterIds={defeatedMonsterIds} />
+        <ArenaGame level={level} equippedItems={equippedItems} pets={pets} consumables={consumables} defeatedMonsterIds={defeatedMonsterIds} initialHealth={healthResult.data as {current_hp:number;max_hp:number;next_hp_at:string|null}} initialPotions={potionsResult.data?.quantity??0} />
       </div>
     </main>
   );

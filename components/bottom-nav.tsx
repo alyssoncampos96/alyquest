@@ -19,7 +19,7 @@ const moreItems = [
   { href: "/journeys", icon: "🗺️", label: "Jornadas" },
   { href: "/daily", icon: "✨", label: "Diárias" },
   { href: "/streak", icon: "🔥", label: "Streak" },
-  { href: "/planning", icon: "🌅", label: "Planejar" },
+  { href: "/planning", icon: "🌅", label: "Meu dia" },
   { href: "/review", icon: "🌙", label: "Revisão" },
   { href: "/inbox", icon: "📥", label: "Inbox" },
   { href: "/budget", icon: "💰", label: "Orçamento" },
