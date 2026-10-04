@@ -1,0 +1,9 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "alyquest": {
+      "type": "streamable-http",
+      "url": "https://alyquestv3.vercel.app/api/mcp"
+    }
+  }
+}
