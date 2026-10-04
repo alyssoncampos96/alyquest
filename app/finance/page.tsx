@@ -1,104 +1,44 @@
+export const instant = false;
+
 import { Suspense } from "react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { generateRecurringFinance, saveFinanceCard, saveFinanceRecurring, saveFinanceTransaction } from "@/app/finance-actions";
+import { financeCategories, money, saoDate } from "@/lib/life-dashboard";
 
-const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-const monthStart = today.slice(0, 8) + "01";
-const categories = ["Alimentação", "Transporte", "Casa", "Saúde", "Lazer", "Educação", "Assinaturas", "Outros"];
+const field = "min-w-0 w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-sm text-white";
+type Card = { id: string; name: string; closing_day: number | null; due_day: number | null };
+type Transaction = { id: string; title: string; amount: number | string; kind: string; category: string; occurred_on: string; payment_method: string; installment_number: number; installment_count: number; card_id: string | null };
+type Recurring = { id: string; title: string; amount: number | string; kind: string; category: string; frequency: string; start_on: string };
 
 async function Content() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
+  const today = saoDate();
+  const monthStart = `${today.slice(0, 7)}-01`;
   const [cardsResult, txResult, recurringResult] = await Promise.all([
-    supabase.from("aq_finance_cards").select("*").eq("user_id", user.id).order("created_at"),
-    supabase.from("aq_finance_transactions").select("*,card:aq_finance_cards(name)").eq("user_id", user.id).gte("occurred_on", monthStart).order("occurred_on", { ascending: false }).limit(80),
-    supabase.from("aq_finance_recurring").select("*").eq("user_id", user.id).eq("active", true).order("start_on", { ascending: false }),
+    supabase.from("aq_finance_cards").select("id,name,closing_day,due_day").eq("user_id", user.id).order("created_at"),
+    supabase.from("aq_finance_transactions").select("id,title,amount,kind,category,occurred_on,payment_method,installment_number,installment_count,card_id").eq("user_id", user.id).gte("occurred_on", monthStart).lte("occurred_on", today).order("occurred_on", { ascending: false }).limit(100),
+    supabase.from("aq_finance_recurring").select("id,title,amount,kind,category,frequency,start_on").eq("user_id", user.id).eq("active", true).order("start_on", { ascending: false }),
   ]);
-  if (cardsResult.error || txResult.error) {
-    return <main className="min-h-screen px-4 pb-28 pt-6"><div className="mx-auto max-w-md"><h1 className="text-2xl font-black">Financeiro</h1><p className="mt-4 rounded-2xl border border-amber-700 bg-amber-950/40 p-4 text-sm text-amber-100">A tela está pronta, mas o banco ainda precisa receber a migração de finanças.</p></div></main>;
-  }
-  const cards = cardsResult.data ?? [];
-  const transactions = txResult.data ?? [];
-  const recurring = recurringResult.error ? [] : recurringResult.data ?? [];
-  const expense = transactions.filter(t => t.kind === "expense").reduce((n, t) => n + Number(t.amount), 0);
-  const income = transactions.filter(t => t.kind === "income").reduce((n, t) => n + Number(t.amount), 0);
-  return (
-    <main className="min-h-screen px-4 pb-28 pt-6">
-      <div className="mx-auto max-w-md">
-        <h1 className="text-2xl font-black">Financeiro</h1>
-        <p className="mt-1 text-sm text-slate-400">Controle pessoal, cartões e parcelas.</p>
-        <section className="mt-5 grid grid-cols-3 gap-2">
-          {[["Entradas", income], ["Saídas", expense], ["Saldo", income - expense]].map(([label, value]) => (
-            <div key={label as string} className="rounded-2xl border border-slate-700 bg-slate-900 p-3">
-              <p className="text-xs text-slate-400">{label as string}</p>
-              <p className="mt-1 text-sm font-bold">{money.format(value as number)}</p>
-            </div>
-          ))}
-        </section>
-        <form action={saveFinanceTransaction} className="mt-5 rounded-2xl border border-slate-700 bg-slate-900 p-4">
-          <h2 className="font-bold">Novo lançamento</h2>
-          <input name="title" required maxLength={180} placeholder="Descrição" className="mt-3 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" />
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <input name="amount" required inputMode="decimal" placeholder="Valor" className="rounded-xl border border-slate-700 bg-slate-950 p-3" />
-            <input name="occurred_on" required type="date" defaultValue={today} className="rounded-xl border border-slate-700 bg-slate-950 p-3" />
-            <select name="kind" defaultValue="expense" className="rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="expense">Despesa</option><option value="income">Receita</option></select>
-            <select name="category" defaultValue="Alimentação" className="rounded-xl border border-slate-700 bg-slate-950 p-3">{categories.map(c => <option key={c}>{c}</option>)}</select>
-            <select name="payment_method" defaultValue="pix" className="rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="pix">Pix</option><option value="credit">Crédito</option><option value="debit">Débito</option><option value="cash">Dinheiro</option><option value="bank_transfer">Transferência</option><option value="other">Outro</option></select>
-            <input name="installments" type="number" min="1" max="120" defaultValue="1" className="rounded-xl border border-slate-700 bg-slate-950 p-3" />
-          </div>
-          <select name="card_id" defaultValue="" className="mt-3 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Sem cartão</option>{cards.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
-          <textarea name="notes" placeholder="Observações" className="mt-3 h-20 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" />
-          <button className="mt-3 w-full rounded-xl bg-emerald-600 p-3 font-bold">Salvar lançamento</button>
-        </form>
-        <form action={saveFinanceCard} className="mt-4 rounded-2xl border border-slate-700 bg-slate-900 p-4">
-          <h2 className="font-bold">Cartão</h2>
-          <input name="name" required maxLength={80} placeholder="Nome do cartão" className="mt-3 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" />
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <input name="closing_day" type="number" min="1" max="31" placeholder="Fechamento" className="rounded-xl border border-slate-700 bg-slate-950 p-3" />
-            <input name="due_day" type="number" min="1" max="31" placeholder="Vencimento" className="rounded-xl border border-slate-700 bg-slate-950 p-3" />
-          </div>
-          <button className="mt-3 w-full rounded-xl border border-violet-700 p-3 font-bold text-violet-200">Salvar cartão</button>
-        </form>
-
-        <form action={saveFinanceRecurring} className="mt-4 rounded-2xl border border-slate-700 bg-slate-900 p-4">
-          <h2 className="font-bold">Gasto/receita recorrente</h2>
-          <p className="mt-1 text-xs text-slate-400">Para despesas fixas, assinaturas, aluguel, salário e outros lançamentos repetidos.</p>
-          <input name="title" required maxLength={180} placeholder="Ex.: Netflix, aluguel, salário" className="mt-3 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" />
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <input name="amount" required inputMode="decimal" placeholder="Valor" className="rounded-xl border border-slate-700 bg-slate-950 p-3" />
-            <input name="start_on" required type="date" defaultValue={today} className="rounded-xl border border-slate-700 bg-slate-950 p-3" />
-            <select name="kind" defaultValue="expense" className="rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="expense">Despesa</option><option value="income">Receita</option></select>
-            <select name="frequency" defaultValue="monthly" className="rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="monthly">1x por mês</option><option value="weekly">Semanal</option><option value="yearly">Anual</option></select>
-            <select name="category" defaultValue="Assinaturas" className="rounded-xl border border-slate-700 bg-slate-950 p-3">{categories.map(c => <option key={c}>{c}</option>)}</select>
-            <select name="payment_method" defaultValue="credit" className="rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="pix">Pix</option><option value="credit">Crédito</option><option value="debit">Débito</option><option value="cash">Dinheiro</option><option value="bank_transfer">Transferência</option><option value="other">Outro</option></select>
-          </div>
-          <select name="card_id" defaultValue="" className="mt-3 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Sem cartão</option>{cards.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
-          <textarea name="notes" placeholder="Observações" className="mt-3 h-20 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" />
-          <button className="mt-3 w-full rounded-xl bg-violet-600 p-3 font-bold">Salvar recorrência</button>
-        </form>
-        <form action={generateRecurringFinance} className="mt-4 rounded-2xl border border-slate-800 bg-slate-950 p-4">
-          <h2 className="font-bold">Gerar recorrentes</h2>
-          <p className="mt-1 text-xs text-slate-400">Cria os lançamentos recorrentes até a data escolhida, sem duplicar meses já gerados.</p>
-          <div className="mt-3 flex gap-2"><input name="until" required type="date" defaultValue={today.slice(0, 8) + "28"} className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950 p-3" /><button className="rounded-xl border border-violet-700 px-4 font-bold text-violet-200">Gerar</button></div>
-        </form>
-        <section className="mt-5 space-y-2">
-          <h2 className="font-bold">Recorrências ativas</h2>
-          {recurring.map(r => <article key={r.id} className="rounded-2xl border border-slate-800 bg-slate-900 p-3"><div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold">{r.title}</h3><p className="mt-1 text-xs text-slate-400">{r.category} · {r.frequency === "monthly" ? "mensal" : r.frequency === "weekly" ? "semanal" : "anual"} · desde {r.start_on}</p></div><p className={r.kind === "expense" ? "font-bold text-rose-300" : "font-bold text-emerald-300"}>{money.format(Number(r.amount))}</p></div></article>)}
-          {!recurring.length && <p className="rounded-2xl border border-slate-800 p-4 text-sm text-slate-400">Nenhuma recorrência ativa.</p>}
-        </section>
-        <section className="mt-5 space-y-2">
-          <h2 className="font-bold">Este mês</h2>
-          {transactions.map(t => <article key={t.id} className="rounded-2xl border border-slate-800 bg-slate-900 p-3"><div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold">{t.title}</h3><p className="mt-1 text-xs text-slate-400">{t.category} · {t.occurred_on}{t.installment_count > 1 ? ` · ${t.installment_number}/${t.installment_count}` : ""}</p></div><p className={t.kind === "expense" ? "font-bold text-rose-300" : "font-bold text-emerald-300"}>{money.format(Number(t.amount))}</p></div></article>)}
-          {!transactions.length && <p className="rounded-2xl border border-slate-800 p-4 text-sm text-slate-400">Nenhum lançamento neste mês.</p>}
-        </section>
-      </div>
-    </main>
-  );
+  if (cardsResult.error || txResult.error) return <main className="px-4 pb-28 pt-6"><div className="mx-auto max-w-md rounded-2xl border border-amber-800 p-4 text-amber-100">A atualização de finanças ainda precisa ser aplicada no Supabase.</div></main>;
+  const cards = (cardsResult.data ?? []) as Card[];
+  const transactions = (txResult.data ?? []) as Transaction[];
+  const recurring = (recurringResult.data ?? []) as Recurring[];
+  const income = transactions.filter(t => t.kind === "income").reduce((total, t) => total + Number(t.amount), 0);
+  const expense = transactions.filter(t => t.kind === "expense").reduce((total, t) => total + Number(t.amount), 0);
+  const credit = transactions.filter(t => t.kind === "expense" && t.payment_method === "credit").reduce((total, t) => total + Number(t.amount), 0);
+  return <main className="min-h-screen px-4 pb-28 pt-6"><div className="mx-auto max-w-md space-y-5">
+    <header><p className="text-xs font-bold uppercase tracking-widest text-emerald-300">Seu dinheiro</p><h1 className="mt-1 text-3xl font-black">Finanças pessoais</h1><p className="mt-1 text-sm text-slate-400">Visão simples do mês, cartões, orçamento e gastos fixos.</p></header>
+    <section className="rounded-3xl border border-emerald-800 bg-gradient-to-br from-emerald-950 to-slate-900 p-5"><p className="text-sm text-emerald-200">Saldo do mês · {today.slice(0, 7)}</p><p className={`mt-1 text-3xl font-black ${income - expense < 0 ? "text-rose-300" : "text-white"}`}>{money.format(income - expense)}</p><div className="mt-4 grid grid-cols-3 gap-2 text-xs"><div><p className="text-slate-400">Entradas</p><b className="text-emerald-300">{money.format(income)}</b></div><div><p className="text-slate-400">Saídas</p><b className="text-rose-300">{money.format(expense)}</b></div><div><p className="text-slate-400">Crédito</p><b>{money.format(credit)}</b></div></div></section>
+    <nav className="grid grid-cols-2 gap-2 text-center text-sm font-bold"><Link href="/budget" className="rounded-2xl border border-violet-700 bg-slate-900 p-3">🎯 Orçamento</Link><Link href="/cards" className="rounded-2xl border border-violet-700 bg-slate-900 p-3">💳 Faturas</Link></nav>
+    <form action={saveFinanceTransaction} className="rounded-3xl border border-slate-700 bg-slate-900 p-4"><h2 className="text-lg font-black">Registrar lançamento</h2><p className="mt-1 text-xs text-slate-400">Ex.: almoço de hoje, salário ou compra parcelada.</p><label className="mt-4 block text-xs text-slate-400">Descrição<input name="title" required maxLength={180} placeholder="O que aconteceu?" className={`mt-1 ${field}`} /></label><div className="mt-3 grid grid-cols-2 gap-3"><label className="min-w-0 text-xs text-slate-400">Valor<input name="amount" required inputMode="decimal" placeholder="0,00" className={`mt-1 ${field}`} /></label><label className="min-w-0 text-xs text-slate-400">Data<input name="occurred_on" required type="date" defaultValue={today} className={`mt-1 ${field} [color-scheme:dark]`} /></label><label className="min-w-0 text-xs text-slate-400">Tipo<select name="kind" defaultValue="expense" className={`mt-1 ${field}`}><option value="expense">Despesa</option><option value="income">Receita</option></select></label><label className="min-w-0 text-xs text-slate-400">Categoria<select name="category" defaultValue="Alimentação" className={`mt-1 ${field}`}>{financeCategories.map(c => <option key={c}>{c}</option>)}</select></label></div><details className="mt-3 rounded-xl border border-slate-800 p-3"><summary className="cursor-pointer text-sm text-violet-200">Pagamento, cartão e parcelas</summary><div className="mt-3 grid grid-cols-2 gap-2"><select name="payment_method" defaultValue="pix" aria-label="Forma de pagamento" className={field}><option value="pix">Pix</option><option value="credit">Crédito</option><option value="debit">Débito</option><option value="cash">Dinheiro</option><option value="bank_transfer">Transferência</option><option value="other">Outro</option></select><input name="installments" type="number" min="1" max="120" defaultValue="1" aria-label="Número de parcelas" className={field}/></div><select name="card_id" defaultValue="" aria-label="Cartão" className={`mt-2 ${field}`}><option value="">Sem cartão</option>{cards.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select><textarea name="notes" placeholder="Observações" className={`mt-2 h-20 ${field}`}/></details><button className="mt-4 w-full rounded-xl bg-emerald-600 p-3 font-bold">Salvar lançamento</button></form>
+    <section><h2 className="mb-3 text-lg font-black">Lançamentos deste mês</h2><div className="space-y-2">{transactions.map(t => <article key={t.id} className="flex items-start justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-3"><div className="min-w-0"><h3 className="truncate font-semibold">{t.title}</h3><p className="mt-1 text-xs text-slate-400">{t.category} · {t.occurred_on}{t.installment_count > 1 ? ` · ${t.installment_number}/${t.installment_count}` : ""}</p></div><b className={t.kind === "expense" ? "shrink-0 text-rose-300" : "shrink-0 text-emerald-300"}>{t.kind === "expense" ? "−" : "+"}{money.format(Number(t.amount))}</b></article>)}{!transactions.length && <p className="rounded-2xl border border-slate-800 p-4 text-sm text-slate-400">Nenhum lançamento neste mês.</p>}</div></section>
+    <details className="rounded-3xl border border-slate-800 bg-slate-900 p-4"><summary className="cursor-pointer font-bold">💳 Cadastrar cartão ({cards.length})</summary><div className="mt-3 space-y-2 text-sm text-slate-300">{cards.map(c => <p key={c.id}>{c.name} · fecha dia {c.closing_day ?? "—"} · vence dia {c.due_day ?? "—"}</p>)}</div><form action={saveFinanceCard} className="mt-3 space-y-2"><input name="name" required maxLength={80} placeholder="Nome do cartão" className={field}/><div className="grid grid-cols-2 gap-2"><input name="closing_day" type="number" min="1" max="31" placeholder="Fechamento" className={field}/><input name="due_day" type="number" min="1" max="31" placeholder="Vencimento" className={field}/></div><button className="w-full rounded-xl border border-violet-700 p-3 font-bold text-violet-200">Salvar cartão</button></form></details>
+    <details className="rounded-3xl border border-slate-800 bg-slate-900 p-4"><summary className="cursor-pointer font-bold">🔁 Gastos e receitas recorrentes ({recurring.length})</summary><div className="mt-3 space-y-2">{recurring.map(r => <p key={r.id} className="flex justify-between gap-2 text-sm"><span>{r.title} · {r.frequency === "monthly" ? "mensal" : r.frequency === "weekly" ? "semanal" : "anual"}</span><b>{money.format(Number(r.amount))}</b></p>)}</div><form action={saveFinanceRecurring} className="mt-4 space-y-2"><input name="title" required maxLength={180} placeholder="Ex.: aluguel" className={field}/><div className="grid grid-cols-2 gap-2"><input name="amount" required inputMode="decimal" placeholder="Valor" className={field}/><input name="start_on" required type="date" defaultValue={today} className={`${field} [color-scheme:dark]`}/><select name="kind" defaultValue="expense" className={field}><option value="expense">Despesa</option><option value="income">Receita</option></select><select name="frequency" defaultValue="monthly" className={field}><option value="monthly">Mensal</option><option value="weekly">Semanal</option><option value="yearly">Anual</option></select><select name="category" defaultValue="Assinaturas" className={field}>{financeCategories.map(c => <option key={c}>{c}</option>)}</select><select name="payment_method" defaultValue="credit" className={field}><option value="pix">Pix</option><option value="credit">Crédito</option><option value="debit">Débito</option><option value="cash">Dinheiro</option><option value="bank_transfer">Transferência</option><option value="other">Outro</option></select></div><select name="card_id" defaultValue="" className={field}><option value="">Sem cartão</option>{cards.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select><textarea name="notes" placeholder="Observações" className={`${field} h-20`}/><button className="w-full rounded-xl bg-violet-600 p-3 font-bold">Salvar recorrência</button></form><form action={generateRecurringFinance} className="mt-4 border-t border-slate-800 pt-4"><p className="text-xs text-slate-400">Gerar lançamentos pendentes até:</p><div className="mt-2 flex gap-2"><input name="until" required type="date" defaultValue={`${today.slice(0, 8)}28`} className={`${field} [color-scheme:dark]`}/><button className="rounded-xl border border-violet-700 px-4 text-sm font-bold">Gerar</button></div></form></details>
+  </div></main>;
 }
 
-export default function Page() {
-  return <Suspense fallback={<main className="p-6">Carregando financeiro...</main>}><Content /></Suspense>;
-}
+export default function Page() { return <Suspense fallback={<main className="p-6">Carregando financeiro...</main>}><Content/></Suspense>; }

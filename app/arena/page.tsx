@@ -6,7 +6,7 @@ import { checked } from "@/lib/query";
 import { getLevelProgress } from "@/lib/game";
 import { ArenaGame } from "@/components/arena-game";
 
-type ArenaItem = { name: string; icon: string; damage_bonus: number | string; item_type?: string | null; battle_slot?: string | null; pet_ability?: string | null; rarity?: string | null; effect?: string | null; defense_bonus?: number | string | null; crit_bonus?: number | string | null };
+type ArenaItem = { id?: string; name: string; icon: string; damage_bonus: number | string; item_type?: string | null; battle_slot?: string | null; pet_ability?: string | null; rarity?: string | null; effect?: string | null; defense_bonus?: number | string | null; crit_bonus?: number | string | null };
 
 const legacyMonsterMap: Record<string, string> = {
   "training-slime": "level-1-medium",
@@ -27,16 +27,17 @@ async function Content() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
-  const [xpResult, victoriesResult] = await Promise.all([
+  const [xpResult, victoriesResult, consumableUseResult] = await Promise.all([
     supabase.from("xp_transactions").select("amount").eq("user_id", user.id),
     supabase.from("aq_arena_victories").select("monster_id").eq("user_id", user.id),
+    supabase.from("aq_consumable_uses").select("item_id").eq("user_id", user.id),
   ]);
   checked(xpResult);
   checked(victoriesResult);
 
   const equippedWithStats = await supabase
     .from("user_items")
-    .select("equipped,items(name,icon,damage_bonus,item_type,battle_slot,pet_ability,rarity,effect,defense_bonus,crit_bonus)")
+    .select("equipped,items(id,name,icon,damage_bonus,item_type,battle_slot,pet_ability,rarity,effect,defense_bonus,crit_bonus)")
     .eq("user_id", user.id)
     .eq("equipped", true);
 
@@ -44,7 +45,7 @@ async function Content() {
   if (equippedWithStats.error) {
     const equippedLegacy = await supabase
       .from("user_items")
-      .select("equipped,items(name,icon,damage_bonus,item_type,battle_slot,pet_ability)")
+      .select("equipped,items(id,name,icon,damage_bonus,item_type,battle_slot,pet_ability)")
       .eq("user_id", user.id)
       .eq("equipped", true);
     checked(equippedLegacy);
@@ -59,6 +60,14 @@ async function Content() {
   const equippedAll = (equipped ?? []).map(row => Array.isArray(row.items) ? row.items[0] : row.items).filter(Boolean) as ArenaItem[];
   const pets = equippedAll.filter(item => item.item_type === "pet");
   const equippedItems = equippedAll.filter(item => item.item_type !== "pet");
+  const usedConsumables = new Set((consumableUseResult.error ? [] : consumableUseResult.data ?? []).map((row) => row.item_id));
+  const consumableResult = await supabase
+    .from("user_items")
+    .select("items(id,name,icon,description,damage_bonus,item_type,battle_slot,rarity,effect,defense_bonus,crit_bonus)")
+    .eq("user_id", user.id);
+  const consumables = consumableResult.error ? [] : ((consumableResult.data ?? [])
+    .map((row) => Array.isArray(row.items) ? row.items[0] : row.items)
+    .filter((item) => item && item.item_type === "consumable" && !usedConsumables.has(item.id)) as ArenaItem[]);
   const defeatedMonsterIds = normalizeArenaVictoryIds(victories ?? []);
   return (
     <main className="min-h-screen px-4 pb-28 pt-6">
@@ -70,7 +79,7 @@ async function Content() {
           </div>
           <Link href="/shop" className="rounded-xl border border-violet-700 px-3 py-2 text-sm font-bold text-violet-200">Loja</Link>
         </div>
-        <ArenaGame level={level} equippedItems={equippedItems} pets={pets} defeatedMonsterIds={defeatedMonsterIds} />
+        <ArenaGame level={level} equippedItems={equippedItems} pets={pets} consumables={consumables} defeatedMonsterIds={defeatedMonsterIds} />
       </div>
     </main>
   );

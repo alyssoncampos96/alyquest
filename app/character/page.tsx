@@ -6,7 +6,7 @@ import { checked } from "@/lib/query";
 import { getLevelProgress, formatNumber } from "@/lib/game";
 import { itemEffectText, itemSlot, slotLabels, type ShopItem } from "@/lib/items";
 
-type OwnedRow = { equipped: boolean; items: ShopItem | ShopItem[] | null };
+type OwnedRow = { equipped: boolean; pet_xp?: number; pet_level?: number; items: ShopItem | ShopItem[] | null };
 const slots = ["weapon", "armor", "helmet", "boots", "cloak", "accessory", "pet"];
 
 async function Content() {
@@ -17,7 +17,7 @@ async function Content() {
   const [xpResult, coinResult, ownedResult, victoryResult, profileResult] = await Promise.all([
     supabase.from("xp_transactions").select("amount,reason,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(8),
     supabase.from("coin_transactions").select("amount").eq("user_id", user.id),
-    supabase.from("user_items").select("equipped,items(*)").eq("user_id", user.id).eq("equipped", true),
+    supabase.from("user_items").select("equipped,pet_xp,pet_level,items(*)").eq("user_id", user.id).eq("equipped", true),
     supabase.from("aq_arena_victories").select("monster_id,defeated_at,reward_xp,reward_coins").eq("user_id", user.id).order("defeated_at", { ascending: false }).limit(5),
     supabase.from("profiles").select("current_streak").eq("user_id", user.id).maybeSingle(),
   ]);
@@ -26,7 +26,9 @@ async function Content() {
   const xp = (xpResult.data ?? []).reduce((sum, row) => sum + Number(row.amount), 0);
   const coins = (coinResult.data ?? []).reduce((sum, row) => sum + Number(row.amount), 0);
   const progress = getLevelProgress(xp);
-  const equipped = ((ownedResult.data ?? []) as OwnedRow[]).map((row) => Array.isArray(row.items) ? row.items[0] : row.items).filter(Boolean) as ShopItem[];
+  const ownedRows = (ownedResult.data ?? []) as OwnedRow[];
+  const petProgress = ownedRows.find(row => { const item = Array.isArray(row.items) ? row.items[0] : row.items; return item?.item_type === "pet"; });
+  const equipped = ownedRows.map((row) => Array.isArray(row.items) ? row.items[0] : row.items).filter(Boolean) as ShopItem[];
   const power = equipped.reduce((sum, item) => sum + Number(item.damage_bonus ?? 0), 0);
   const defense = equipped.reduce((sum, item) => sum + Number(item.defense_bonus ?? 0), 0);
   const crit = equipped.reduce((sum, item) => sum + Number(item.crit_bonus ?? 0), 0);
@@ -46,6 +48,7 @@ async function Content() {
             <div className="mt-4 h-3 rounded-full bg-slate-950"><div className="h-3 rounded-full bg-violet-500" style={{ width: `${progress.progressPercent}%` }} /></div>
             <p className="mt-1 text-xs text-slate-400">{formatNumber(progress.xpIntoLevel)} / {formatNumber(progress.requirement)} XP para o próximo nível</p>
           </div>
+          {petProgress && <div className="border-t border-violet-900 p-3 text-center text-sm">🐾 Pet ativo · nível {petProgress.pet_level ?? 1} · {petProgress.pet_xp ?? 0} XP</div>}
           <div className="grid grid-cols-3 border-t border-violet-900 text-center text-xs">
             <div className="p-3"><p className="text-slate-400">Poder</p><p className="font-black">+{Math.round(power * 100)}%</p></div>
             <div className="border-x border-violet-900 p-3"><p className="text-slate-400">Defesa</p><p className="font-black">+{Math.round(defense * 100)}%</p></div>

@@ -4,8 +4,9 @@ import { useMemo, useState, useTransition } from "react";
 import { claimArenaVictory } from "@/app/arena-actions";
 import { arenaMonsters, type ArenaMonster, unlockedArenaMonsters } from "@/lib/arena";
 
-export type EquippedItem = { name: string; icon: string; damage_bonus: number | string; item_type?: string | null; battle_slot?: string | null; rarity?: string | null; effect?: string | null; defense_bonus?: number | string | null; crit_bonus?: number | string | null };
+export type EquippedItem = { id?: string; name: string; icon: string; damage_bonus: number | string; item_type?: string | null; battle_slot?: string | null; rarity?: string | null; effect?: string | null; defense_bonus?: number | string | null; crit_bonus?: number | string | null };
 type PetItem = EquippedItem & { pet_ability?: string | null };
+type ConsumableItem = EquippedItem;
 type BattleLog = { id: string; text: string; tone?: "good" | "bad" | "neutral" };
 type EnemyUnit = { id: string; name: string; icon: string; hp: number; maxHp: number; attack: number; defense: number; critChance: number };
 
@@ -13,6 +14,7 @@ function clamp(n: number, min: number, max: number) { return Math.max(min, Math.
 function roll(min: number, max: number) { return Math.floor(min + Math.random() * (max - min + 1)); }
 function didCrit(chance: number) { return Math.random() < chance; }
 function pct(value: number, total: number) { return `${Math.max(0, Math.min(100, (value / total) * 100))}%`; }
+function safeText(value: unknown, fallback = "Não foi possível registrar a vitória.") { return typeof value === "string" ? value : value == null ? fallback : JSON.stringify(value); }
 
 function teamFor(monster: ArenaMonster): EnemyUnit[] {
   if (monster.tier !== "boss") return [{ id: monster.id, name: monster.name, icon: monster.icon, hp: monster.hp, maxHp: monster.hp, attack: monster.attack, defense: monster.defense, critChance: monster.critChance }];
@@ -30,7 +32,7 @@ function teamFor(monster: ArenaMonster): EnemyUnit[] {
   }));
 }
 
-export function ArenaGame({ level, equippedItems, pets, defeatedMonsterIds }: { level: number; equippedItems: EquippedItem[]; pets: PetItem[]; defeatedMonsterIds: string[] }) {
+export function ArenaGame({ level, equippedItems, pets, consumables, defeatedMonsterIds }: { level: number; equippedItems: EquippedItem[]; pets: PetItem[]; consumables: ConsumableItem[]; defeatedMonsterIds: string[] }) {
   const defeatedSet = useMemo(() => new Set(defeatedMonsterIds), [defeatedMonsterIds]);
   const defeatedCount = defeatedMonsterIds.length;
   const availableMonsters = useMemo(() => unlockedArenaMonsters(defeatedCount).filter(item => !defeatedSet.has(item.id)).slice(0, 8), [defeatedCount, defeatedSet]);
@@ -44,6 +46,7 @@ export function ArenaGame({ level, equippedItems, pets, defeatedMonsterIds }: { 
   const [reward, setReward] = useState("");
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
+  const [selectedConsumableId, setSelectedConsumableId] = useState("");
   const [heroPulse, setHeroPulse] = useState(false);
   const [enemyPulse, setEnemyPulse] = useState<string | null>(null);
 
@@ -52,16 +55,19 @@ export function ArenaGame({ level, equippedItems, pets, defeatedMonsterIds }: { 
     const rawDefense = equippedItems.reduce((sum, item) => sum + Number(item.defense_bonus ?? 0), 0);
     const rawCrit = equippedItems.reduce((sum, item) => sum + Number(item.crit_bonus ?? 0), 0);
     const petBonus = pets.reduce((sum, item) => sum + Number(item.damage_bonus ?? 0.03), 0);
-    const bonus = clamp(rawPower + petBonus, 0, 1.25);
+    const selectedConsumable = consumables.find((item) => item.id === selectedConsumableId);
+    const consumableBonus = selectedConsumable ? 0.18 + Number(selectedConsumable.damage_bonus ?? 0) : 0;
+    const bonus = clamp(rawPower + petBonus + consumableBonus, 0, 1.35);
     return {
       bonus,
-      maxHp: 55 + level * 8 + equippedItems.length * 6 + pets.length * 8 + Math.round(rawDefense * 80),
+      selectedConsumable,
+      maxHp: 55 + level * 8 + equippedItems.length * 6 + pets.length * 8 + Math.round(rawDefense * 80) + (selectedConsumable ? 10 : 0),
       attackMin: 7 + level + Math.round(bonus * 34),
       attackMax: 14 + level * 2 + Math.round(bonus * 92),
       defense: Math.min(65, equippedItems.length * 2 + pets.length * 2 + Math.round(bonus * 16 + rawDefense * 70)),
       critChance: clamp(0.08 + level * 0.004 + rawPower / 3.5 + rawCrit + pets.length * 0.025, 0.08, 0.55),
     };
-  }, [equippedItems, level, pets]);
+  }, [consumables, equippedItems, level, pets, selectedConsumableId]);
 
   function append(text: string, tone: BattleLog["tone"] = "neutral") {
     setLog(items => [{ id: `${Date.now()}-${Math.random()}`, text, tone }, ...items].slice(0, 12));
@@ -97,10 +103,21 @@ export function ArenaGame({ level, equippedItems, pets, defeatedMonsterIds }: { 
       setFinished("win");
       startTransition(async () => {
         try {
-          const result = await claimArenaVictory(monster.id);
-          setReward(result.claimed ? `Vitória registrada: +${result.xp} XP e +${result.coins} moeda.` : result.message ?? "Esse monstro já foi derrotado.");
+          const result = await claimArenaVictory(monster.id, {
+            monster_id: monster.id,
+            monster_name: monster.name,
+            tier: monster.tier,
+            level: monster.level,
+            hero_hp: heroHp,
+            enemies: nextEnemies.map(({ id, name, hp, maxHp }) => ({ id, name, hp, maxHp })),
+            log: [`${heroCrit ? "CRÍTICO! " : ""}Você causou ${heroDamage} de dano em ${target.name}.`, ...log.map((item) => item.text)].slice(0, 20),
+            equipment: equippedItems.map((item) => item.name),
+            pets: pets.map((item) => item.name),
+            consumable: stats.selectedConsumable?.name ?? null,
+          }, stats.selectedConsumable?.id ?? null);
+          setReward(result.claimed ? `Vitória registrada: +${result.xp} XP, +${result.coins} moeda e +${result.pet_xp ?? 0} XP para pet.` : safeText(result.message, "Esse monstro já foi derrotado."));
         } catch (err) {
-          setError(err instanceof Error ? err.message : "Não foi possível registrar a vitória.");
+          setError(err instanceof Error ? err.message : safeText(err));
         }
       });
       return;
@@ -153,16 +170,21 @@ export function ArenaGame({ level, equippedItems, pets, defeatedMonsterIds }: { 
       {monster && <div className="overflow-hidden rounded-3xl border border-slate-700 bg-slate-900">
         <div className="border-b border-slate-800 bg-[radial-gradient(circle_at_top,#334155,#020617_65%)] p-4">
           <div className="flex items-center justify-between gap-3"><div><h3 className="font-bold">Fase {monster.level}: {monster.name}</h3><p className="mt-1 text-xs text-slate-300">{monster.description}</p></div>{!started && <button onClick={() => startBattle()} className="rounded-xl bg-violet-600 px-3 py-2 text-xs font-bold">Entrar</button>}</div>
-          <div className="relative mt-5 h-56 rounded-2xl border border-slate-700 bg-gradient-to-b from-emerald-950/60 to-slate-950 p-4 shadow-inner">
-            <div className="absolute inset-x-6 bottom-8 h-1 rounded-full bg-emerald-900/70" />
-            <div className={`absolute bottom-10 left-6 text-6xl transition-transform duration-300 ${heroPulse ? "translate-x-8 scale-110" : ""}`}>🧙🏻‍♂️</div>
-            <div className="absolute bottom-5 left-4 w-32 rounded-xl border border-slate-700 bg-slate-950/90 p-2 text-xs"><div className="flex justify-between"><span>Aly</span><span>{heroHp || stats.maxHp}/{stats.maxHp}</span></div><div className="mt-1 h-2 rounded bg-slate-800"><div className="h-2 rounded bg-emerald-500" style={{ width: pct(heroHp || stats.maxHp, stats.maxHp) }} /></div></div>
-            <div className="absolute bottom-10 right-4 flex items-end gap-5">
-              {(enemies.length ? enemies : teamFor(monster)).map(enemy => <div key={enemy.id} className={`text-center transition-transform duration-300 ${enemyPulse === enemy.id ? "-translate-x-7 scale-110" : ""} ${enemy.hp <= 0 ? "opacity-30 grayscale" : ""}`}><div className="text-6xl">{enemy.icon}</div><div className="mt-1 w-28 rounded-xl border border-slate-700 bg-slate-950/90 p-2 text-xs"><div className="truncate">{enemy.name}</div><div className="mt-1 h-2 rounded bg-slate-800"><div className="h-2 rounded bg-rose-500" style={{ width: pct(enemy.hp, enemy.maxHp) }} /></div><div className="mt-1 text-slate-400">{enemy.hp}/{enemy.maxHp}</div></div></div>)}
+          <div className="relative mt-5 flex min-h-64 items-end rounded-2xl border border-slate-700 bg-gradient-to-b from-emerald-950/60 to-slate-950 p-3 shadow-inner sm:p-4">
+            <div className="absolute inset-x-4 bottom-12 h-1 rounded-full bg-emerald-900/70" />
+            <div className="relative z-10 grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1.65fr)] items-end gap-2">
+              <div className="min-w-0">
+                <div className={`mb-2 text-center text-5xl transition-transform duration-300 sm:text-6xl ${heroPulse ? "translate-x-5 scale-110" : ""}`} aria-label="Personagem Aly">🧙🏻‍♂️</div>
+                <div className="rounded-xl border border-slate-700 bg-slate-950/90 p-2 text-[11px]"><div className="flex flex-wrap justify-between gap-x-1"><span>Aly</span><span>{started ? heroHp : stats.maxHp}/{stats.maxHp}</span></div><div className="mt-1 h-2 rounded bg-slate-800"><div className="h-2 rounded bg-emerald-500" style={{ width: pct(started ? heroHp : stats.maxHp, stats.maxHp) }} /></div></div>
+              </div>
+              <div className="flex min-w-0 items-end justify-end gap-1 sm:gap-2">
+                {(enemies.length ? enemies : teamFor(monster)).map(enemy => <div key={enemy.id} className={`min-w-0 flex-1 text-center transition-transform duration-300 sm:max-w-28 ${enemyPulse === enemy.id ? "-translate-x-3 scale-110" : ""} ${enemy.hp <= 0 ? "opacity-30 grayscale" : ""}`}><div className="mb-2 text-5xl sm:text-6xl" aria-label={enemy.name}>{enemy.icon}</div><div className="rounded-xl border border-slate-700 bg-slate-950/90 p-2 text-[11px]"><div className="truncate" title={enemy.name}>{enemy.name}</div><div className="mt-1 h-2 rounded bg-slate-800"><div className="h-2 rounded bg-rose-500" style={{ width: pct(enemy.hp, enemy.maxHp) }} /></div><div className="mt-1 text-slate-400">{enemy.hp}/{enemy.maxHp}</div></div></div>)}
+              </div>
             </div>
           </div>
         </div>
         {started && <div className="p-4">
+          {!finished && consumables.length > 0 && <label className="mb-3 block text-xs text-slate-300">Consumível nesta batalha<select value={selectedConsumableId} onChange={(event) => setSelectedConsumableId(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-sm"><option value="">Nenhum</option>{consumables.map((item) => <option key={item.id} value={item.id}>{item.icon} {item.name} · boost de batalha</option>)}</select></label>}
           <button disabled={!!finished || pending} onClick={attack} className="w-full rounded-2xl bg-emerald-600 py-3 font-black disabled:bg-slate-700">{finished === "win" ? "Vitória!" : finished === "lose" ? "Derrota" : pending ? "Registrando..." : "⚔️ Atacar"}</button>
           {finished === "lose" && <button onClick={() => startBattle(monster)} className="mt-2 w-full rounded-2xl border border-violet-700 py-3 font-bold text-violet-200">Tentar de novo</button>}
           {reward && <p className="mt-3 rounded-xl bg-emerald-950 p-3 text-sm text-emerald-200">{reward}</p>}
@@ -173,7 +195,7 @@ export function ArenaGame({ level, equippedItems, pets, defeatedMonsterIds }: { 
 
       <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 text-sm">
         <h3 className="font-bold">Equipados</h3>
-        <div className="mt-2 flex flex-wrap gap-2 text-xs">{equippedItems.map(item => <span key={item.name} className="rounded-full bg-slate-950 px-3 py-2">{item.icon} {item.name}</span>)}{pets.map(item => <span key={item.name} className="rounded-full bg-fuchsia-950 px-3 py-2">{item.icon} {item.name}</span>)}{!equippedItems.length && !pets.length && <span className="text-slate-400">Nenhum item equipado.</span>}</div>
+        <div className="mt-2 flex flex-wrap gap-2 text-xs">{equippedItems.map(item => <span key={item.name} className="rounded-full bg-slate-950 px-3 py-2">{item.icon} {item.name}</span>)}{pets.map(item => <span key={item.name} className="rounded-full bg-fuchsia-950 px-3 py-2">{item.icon} {item.name}</span>)}{!equippedItems.length && !pets.length && <span className="text-slate-400">Nenhum item equipado.</span>}</div>{consumables.length > 0 && <p className="mt-3 text-xs text-slate-400">Consumíveis disponíveis: {consumables.length}. Eles são gastos quando uma vitória é registrada.</p>}
       </div>
     </section>
   );
