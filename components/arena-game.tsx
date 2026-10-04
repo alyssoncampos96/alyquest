@@ -115,7 +115,7 @@ export function ArenaGame({ level, equippedItems, pets, consumables, defeatedMon
             pets: pets.map((item) => item.name),
             consumable: stats.selectedConsumable?.name ?? null,
           }, stats.selectedConsumable?.id ?? null);
-          setReward(result.claimed ? `Vitória registrada: +${result.xp} XP, +${result.coins} moeda e +${result.pet_xp ?? 0} XP para pet.` : safeText(result.message, "Esse monstro já foi derrotado."));
+          setReward(result.claimed ? `Vitória registrada: +${result.xp} XP e +${result.coins} moeda${pets.length && Number(result.pet_xp) > 0 ? `; +${result.pet_xp} XP para pet` : ""}.` : safeText(result.message, "Esse monstro já foi derrotado."));
         } catch (err) {
           setError(err instanceof Error ? err.message : safeText(err));
         }
