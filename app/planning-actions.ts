@@ -1,6 +1,7 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { cleanCategory } from '@/lib/user-preferences';
 import { parseRule, parseSteps, categories } from '@/lib/planning';
 async function session() { const s=await createClient(); const {data:{user}}=await s.auth.getUser(); if(!user)throw new Error('Entre novamente para continuar.');return s; }
 function refresh() { ['/', '/tasks', '/workouts', '/bosses', '/focus', '/shop', '/achievements'].forEach(path=>revalidatePath(path)); }
@@ -10,9 +11,9 @@ async function invoke(name:string,args:Record<string,unknown>) {
  refresh();return data;
 }
 async function missionData(form:FormData) {
- const title=String(form.get('title')??'').trim(),category=String(form.get('category')??'Pessoal'),priority=String(form.get('priority')??'medium');
+ const title=String(form.get('title')??'').trim(),category=cleanCategory(form.get('category')??'Pessoal'),priority=String(form.get('priority')??'medium');
  const hours=Number(form.get('estimated_hours')); const kind=String(form.get('kind')??'task');
- if(!title||title.length>200||!categories.includes(category)||!['low','medium','high'].includes(priority)||!Number.isFinite(hours)||hours<=0||hours>1000||!['single','task','workout'].includes(kind))throw new Error('Confira o título, categoria e duração.');
+ if(!title||title.length>200||!['low','medium','high'].includes(priority)||!Number.isFinite(hours)||hours<=0||hours>1000||!['single','task','workout'].includes(kind))throw new Error('Confira o título, categoria e duração.');
  const rule=parseRule(JSON.parse(String(form.get('rule')??'null')));
  const due=String(form.get('due_date')??'');if(due&&!/^\d{4}-\d{2}-\d{2}$/.test(due))throw new Error('Prazo inválido.');
  return {p_data:{title,category,priority,estimated_hours:hours,boss_id:form.get('boss_id')||null,due_date:due||null,kind,...(form.has('steps')?{steps:parseSteps(JSON.parse(String(form.get('steps')))).map(s=>({...s,done:false,actual:''}))}:{})},p_rule:rule};

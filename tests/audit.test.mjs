@@ -12,7 +12,7 @@ function load(file, mocks = {}) {
 function actions({user = {id:'user'}, error = null} = {}) {
   const calls = [], paths = [];
   const client = {auth:{getUser:async()=>({data:{user}})}, rpc: async (name, args) => {calls.push({name,args});return {data:'session',error}}};
-  return { api: load('app/actions.ts', {'next/cache':{revalidatePath:(p,type)=>{assert.equal(type,undefined);paths.push(p)}}, '@/lib/supabase/server':{createClient:async()=>client}}), calls, paths };
+  return { api: load('app/actions.ts', {'@/lib/user-preferences':load('lib/user-preferences.ts'), 'next/cache':{revalidatePath:(p,type)=>{assert.equal(type,undefined);paths.push(p)}}, '@/lib/supabase/server':{createClient:async()=>client}}), calls, paths };
 }
 test('completeTask delegates task completion to the existing RPC and invalidates all affected pages', async()=>{
   const {api,calls,paths}=actions(); await api.completeTask('task');

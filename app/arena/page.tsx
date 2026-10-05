@@ -1,3 +1,4 @@
+import { displayName } from "@/lib/user-preferences";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -85,7 +86,7 @@ async function Content() {
           </div>
           <Link href="/shop" className="rounded-xl border border-violet-700 px-3 py-2 text-sm font-bold text-violet-200">Loja</Link>
         </div>
-        <ArenaGame level={level} equippedItems={equippedItems} pets={pets} consumables={consumables} defeatedMonsterIds={defeatedMonsterIds} initialHealth={healthResult.data as {current_hp:number;max_hp:number;next_hp_at:string|null}} initialPotions={potionsResult.data?.quantity??0} />
+        <ArenaGame playerName={displayName(user.user_metadata)} level={level} equippedItems={equippedItems} pets={pets} consumables={consumables} defeatedMonsterIds={defeatedMonsterIds} initialHealth={healthResult.data as {current_hp:number;max_hp:number;next_hp_at:string|null}} initialPotions={potionsResult.data?.quantity??0} />
       </div>
     </main>
   );

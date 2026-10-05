@@ -1,5 +1,5 @@
 export const notificationPhrases = [
-  "Bom dia, Aly. Seu mapa de missões já está brilhando por aqui.",
+  "Bom dia! Seu mapa de missões já está brilhando por aqui.",
   "Passando com energia: tem missão esperando você ganhar XP hoje.",
   "Seu eu do futuro agradece se você olhar essas pendências agora.",
   "A aventura do dia começou. Bora escolher a primeira missão?",

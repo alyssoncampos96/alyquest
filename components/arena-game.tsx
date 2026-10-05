@@ -32,7 +32,7 @@ function teamFor(monster: ArenaMonster): EnemyUnit[] {
   }));
 }
 
-export function ArenaGame({ level, equippedItems, pets, consumables, defeatedMonsterIds, initialHealth, initialPotions }: { level: number; equippedItems: EquippedItem[]; pets: PetItem[]; consumables: ConsumableItem[]; defeatedMonsterIds: string[]; initialHealth: ArenaHealth; initialPotions: number }) {
+export function ArenaGame({ playerName = "Seu personagem", level, equippedItems, pets, consumables, defeatedMonsterIds, initialHealth, initialPotions }: { playerName?: string; level: number; equippedItems: EquippedItem[]; pets: PetItem[]; consumables: ConsumableItem[]; defeatedMonsterIds: string[]; initialHealth: ArenaHealth; initialPotions: number }) {
   const defeatedSet = useMemo(() => new Set(defeatedMonsterIds), [defeatedMonsterIds]);
   const defeatedCount = defeatedMonsterIds.length;
   const availableMonsters = useMemo(() => unlockedArenaMonsters(defeatedCount).filter(item => !defeatedSet.has(item.id)).slice(0, 8), [defeatedCount, defeatedSet]);
@@ -190,7 +190,7 @@ export function ArenaGame({ level, equippedItems, pets, consumables, defeatedMon
     <section className="mt-5 space-y-4">
       <div className="rounded-3xl border border-violet-800 bg-gradient-to-br from-slate-900 to-violet-950 p-5">
         <div className="flex items-start justify-between gap-3">
-          <div><p className="text-xs font-bold uppercase tracking-[0.25em] text-violet-300">Arena</p><h2 className="mt-2 text-xl font-black">Aly vs Monstros</h2><p className="mt-1 text-sm text-slate-300">Fases com inimigo médio, difícil e duelo final. Cada vitória vale uma vez.</p></div>
+          <div><p className="text-xs font-bold uppercase tracking-[0.25em] text-violet-300">Arena</p><h2 className="mt-2 text-xl font-black">{playerName} vs Monstros</h2><p className="mt-1 text-sm text-slate-300">Fases com inimigo médio, difícil e duelo final. Cada vitória vale uma vez.</p></div>
           <div className="text-4xl">🧙🏻‍♂️</div>
         </div>
         <div className="mt-4 grid grid-cols-4 gap-2 text-center text-xs">
@@ -232,8 +232,8 @@ export function ArenaGame({ level, equippedItems, pets, consumables, defeatedMon
             <div className="absolute inset-x-4 bottom-12 h-1 rounded-full bg-emerald-900/70" />
             <div className="relative z-10 grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1.65fr)] items-end gap-2">
               <div className="min-w-0">
-                <div className={`mb-2 text-center text-5xl transition-transform duration-300 sm:text-6xl ${heroPulse ? "translate-x-5 scale-110" : ""}`} aria-label="Personagem Aly">🧙🏻‍♂️</div>
-                <div className="rounded-xl border border-slate-700 bg-slate-950/90 p-2 text-[11px]"><div className="flex flex-wrap justify-between gap-x-1"><span>Aly</span><span>{heroHp}/{stats.maxHp}</span></div><div className="mt-1 h-2 rounded bg-slate-800"><div className="h-2 rounded bg-emerald-500" style={{ width: pct(heroHp, stats.maxHp) }} /></div></div>
+                <div className={`mb-2 text-center text-5xl transition-transform duration-300 sm:text-6xl ${heroPulse ? "translate-x-5 scale-110" : ""}`} aria-label={`Personagem ${playerName}`}>🧙🏻‍♂️</div>
+                <div className="rounded-xl border border-slate-700 bg-slate-950/90 p-2 text-[11px]"><div className="flex flex-wrap justify-between gap-x-1"><span className="truncate">{playerName}</span><span>{heroHp}/{stats.maxHp}</span></div><div className="mt-1 h-2 rounded bg-slate-800"><div className="h-2 rounded bg-emerald-500" style={{ width: pct(heroHp, stats.maxHp) }} /></div></div>
               </div>
               <div className="flex min-w-0 items-end justify-end gap-1 sm:gap-2">
                 {(enemies.length ? enemies : teamFor(monster)).map(enemy => <div key={enemy.id} className={`min-w-0 flex-1 text-center transition-transform duration-300 sm:max-w-28 ${enemyPulse === enemy.id ? "-translate-x-3 scale-110" : ""} ${enemy.hp <= 0 ? "opacity-30 grayscale" : ""}`}><div className="mb-2 text-5xl sm:text-6xl" aria-label={enemy.name}>{enemy.icon}</div><div className="rounded-xl border border-slate-700 bg-slate-950/90 p-2 text-[11px]"><div className="truncate" title={enemy.name}>{enemy.name}</div><div className="mt-1 h-2 rounded bg-slate-800"><div className="h-2 rounded bg-rose-500" style={{ width: pct(enemy.hp, enemy.maxHp) }} /></div><div className="mt-1 text-slate-400">{enemy.hp}/{enemy.maxHp}</div></div></div>)}

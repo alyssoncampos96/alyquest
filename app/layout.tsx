@@ -1,3 +1,4 @@
+import { SessionSync } from '@/components/session-sync';
 import { RewardToast } from '@/components/reward-toast';
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
@@ -11,13 +12,15 @@ export const viewport: Viewport = { themeColor: '#080a13', width: 'device-width'
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   let theme = 'default';
+  let userId: string | null = null;
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
+    userId = user?.id ?? null;
     if (user) {
       const { data } = await supabase.from('aq_theme_preferences').select('theme').eq('user_id', user.id).maybeSingle();
       theme = data?.theme || 'default';
     }
   } catch {}
-  return <html lang="pt-BR"><body className={`theme-${theme} text-white antialiased`}>{children}<RewardToast/><BottomNav/></body></html>;
+  return <html lang="pt-BR"><body className={`theme-${theme} text-white antialiased`}>{children}<SessionSync userId={userId}/><RewardToast/><BottomNav/></body></html>;
 }

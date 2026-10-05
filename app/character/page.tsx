@@ -6,6 +6,10 @@ import { checked } from "@/lib/query";
 import { getLevelProgress, formatNumber } from "@/lib/game";
 import { itemEffectText, itemSlot, slotLabels, type ShopItem } from "@/lib/items";
 
+import { displayName } from "@/lib/user-preferences";
+import { saveDisplayName } from "@/app/preference-actions";
+import { ActionForm } from "@/components/action-form";
+
 type OwnedRow = { equipped: boolean; pet_xp?: number; pet_level?: number; items: ShopItem | ShopItem[] | null };
 const slots = ["weapon", "armor", "helmet", "boots", "cloak", "accessory", "pet"];
 
@@ -43,7 +47,7 @@ async function Content() {
         <section className="mt-5 overflow-hidden rounded-3xl border border-violet-800 bg-gradient-to-br from-slate-900 to-violet-950">
           <div className="p-5 text-center">
             <div className="text-7xl">🧙🏻‍♂️</div>
-            <h2 className="mt-2 text-xl font-black">Aly · Nv. {progress.level}</h2>
+            <h2 className="mt-2 text-xl font-black">{displayName(user.user_metadata)} · Nv. {progress.level}</h2>
             <p className="mt-1 text-sm text-slate-300">🪙 {formatNumber(coins)} · 🔥 {profileResult.data?.current_streak ?? 0} dias de sequência</p>
             <div className="mt-4 h-3 rounded-full bg-slate-950"><div className="h-3 rounded-full bg-violet-500" style={{ width: `${progress.progressPercent}%` }} /></div>
             <p className="mt-1 text-xs text-slate-400">{formatNumber(progress.xpIntoLevel)} / {formatNumber(progress.requirement)} XP para o próximo nível</p>
@@ -55,6 +59,10 @@ async function Content() {
             <div className="p-3"><p className="text-slate-400">Crítico</p><p className="font-black">+{Math.round(crit * 100)}%</p></div>
           </div>
         </section>
+        <ActionForm action={saveDisplayName} className="mt-5 rounded-2xl border border-slate-700 bg-slate-900 p-4">
+          <label className="block text-sm">Como você quer ser chamado?<input name="display_name" required maxLength={80} defaultValue={displayName(user.user_metadata) === "Seu personagem" ? "" : displayName(user.user_metadata)} autoComplete="nickname" className="mt-2 w-full rounded-xl bg-slate-950 p-3"/></label>
+          <button className="mt-3 rounded-xl bg-violet-600 px-4 py-2 font-bold">Salvar nome</button>
+        </ActionForm>
         <section className="mt-6">
           <h2 className="font-black">Equipamentos</h2>
           <div className="mt-3 grid grid-cols-1 gap-2">

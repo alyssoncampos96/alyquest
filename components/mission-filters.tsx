@@ -5,11 +5,11 @@ import { useState, type ReactNode } from "react";
 const categories = ["Pessoal", "Trabalho", "Faculdade", "Financeiro", "Saúde"];
 type Mission = { id: string; category: string | null; status: string; card: ReactNode };
 
-export function MissionFilters({ missions, children }: { missions: Mission[]; children?: ReactNode }) {
+export function MissionFilters({ missions, children, categoryOptions = [] }: { missions: Mission[]; children?: ReactNode; categoryOptions?: string[] }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [status,setStatus]=useState('pending');
   const filtered=missions.filter(m=>status==='all'||m.status===status);
-  const options = [...new Set([...categories, ...missions.map(mission => mission.category || "Sem categoria")])];
+  const options = [...new Set([...categories, ...categoryOptions, ...missions.map(mission => mission.category || "Sem categoria")])];
   const visible = selected === null ? filtered : filtered.filter(mission => (mission.category || "Sem categoria") === selected);
 
   return <>

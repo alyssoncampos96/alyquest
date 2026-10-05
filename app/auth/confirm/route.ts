@@ -11,5 +11,8 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.verifyOtp({ token_hash, type: type as EmailOtpType });
     if (!error) return NextResponse.redirect(new URL(safeNext(params.get("next") || (type === "recovery" ? "/auth/update-password" : "/")), request.url));
   }
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) return NextResponse.redirect(new URL(safeNext(params.get("next") || (type === "recovery" ? "/auth/update-password" : "/")), request.url));
   return NextResponse.redirect(new URL("/auth/error", request.url));
 }
