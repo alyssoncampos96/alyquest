@@ -6,6 +6,11 @@ import { createClient } from "@/lib/supabase/server";
 const categories = ["Alimentação", "Transporte", "Casa", "Saúde", "Lazer", "Educação", "Assinaturas", "Outros"];
 const methods = ["cash", "pix", "debit", "credit", "bank_transfer", "other"];
 
+function parseAmount(value: FormDataEntryValue | null) {
+  const raw = String(value ?? "").trim();
+  return Number(raw.includes(",") ? raw.replace(/\./g, "").replace(",", ".") : raw);
+}
+
 async function invoke(name: string, args: Record<string, unknown>) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -27,7 +32,7 @@ export async function saveFinanceCard(form: FormData) {
 
 export async function saveFinanceTransaction(form: FormData) {
   const title = String(form.get("title") ?? "").trim();
-  const amount = Number(String(form.get("amount") ?? "").replace(",", "."));
+  const amount = parseAmount(form.get("amount"));
   const kind = String(form.get("kind") ?? "expense");
   const category = String(form.get("category") ?? "Outros");
   const occurred = String(form.get("occurred_on") ?? "");
@@ -54,7 +59,7 @@ export async function saveFinanceTransaction(form: FormData) {
 export async function updateFinanceTransaction(form: FormData) {
   const id = String(form.get("id") ?? "");
   const title = String(form.get("title") ?? "").trim();
-  const amount = Number(String(form.get("amount") ?? "").replace(",", "."));
+  const amount = parseAmount(form.get("amount"));
   const kind = String(form.get("kind") ?? "expense");
   const category = String(form.get("category") ?? "Outros");
   const occurred = String(form.get("occurred_on") ?? "");
@@ -78,7 +83,7 @@ export async function updateFinanceTransaction(form: FormData) {
 
 export async function saveFinanceRecurring(form: FormData) {
   const title = String(form.get("title") ?? "").trim();
-  const amount = Number(String(form.get("amount") ?? "").replace(",", "."));
+  const amount = parseAmount(form.get("amount"));
   const kind = String(form.get("kind") ?? "expense");
   const category = String(form.get("category") ?? "Outros");
   const startOn = String(form.get("start_on") ?? "");
