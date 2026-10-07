@@ -1,5 +1,5 @@
 begin;
-select set_config('request.jwt.claim.sub','1aef265b-8a27-4b3b-81ba-2942a6edbe98',true);
+select set_config('request.jwt.claim.sub',(select id::text from auth.users order by created_at limit 1),true);
 set local role authenticated;
 do $$
 declare first_id uuid; second_id uuid; changed int; blocked boolean;
