@@ -51,6 +51,31 @@ export async function saveFinanceTransaction(form: FormData) {
   });
 }
 
+export async function updateFinanceTransaction(form: FormData) {
+  const id = String(form.get("id") ?? "");
+  const title = String(form.get("title") ?? "").trim();
+  const amount = Number(String(form.get("amount") ?? "").replace(",", "."));
+  const kind = String(form.get("kind") ?? "expense");
+  const category = String(form.get("category") ?? "Outros");
+  const occurred = String(form.get("occurred_on") ?? "");
+  const method = String(form.get("payment_method") ?? "pix");
+  const cardId = String(form.get("card_id") ?? "") || null;
+  const notes = String(form.get("notes") ?? "").slice(0, 1000);
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) ||
+      !title || title.length > 180 || !Number.isFinite(amount) || amount <= 0 || amount > 100000000 ||
+      !["expense", "income"].includes(kind) || !categories.includes(category) || !methods.includes(method) ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(occurred)) {
+    throw new Error("Confira os dados do lançamento.");
+  }
+  await invoke("aq_finance_update_transaction", {
+    p_id: id, p_title: title, p_amount: amount, p_kind: kind, p_category: category,
+    p_occurred_on: occurred, p_payment_method: method, p_card_id: cardId, p_notes: notes,
+  });
+  revalidatePath("/cards");
+  revalidatePath("/budget");
+  revalidatePath("/weekly");
+}
+
 export async function saveFinanceRecurring(form: FormData) {
   const title = String(form.get("title") ?? "").trim();
   const amount = Number(String(form.get("amount") ?? "").replace(",", "."));
