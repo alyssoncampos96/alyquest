@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { cancelFast, finishFast, startFast } from "@/app/fasting-actions";
 import { FastingActiveCard } from "@/components/fasting-active-card";
+import { DateTimeInput } from "@/components/date-time-input";
 
 function partsInSaoPaulo(date: Date) {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -50,8 +51,8 @@ async function Content() {
             <form action={finishFast} className="mt-5 rounded-2xl border border-slate-700 bg-slate-900 p-4">
               <h2 className="font-bold">Finalizar jejum ativo</h2>
               <input type="hidden" name="session_id" value={active.id} />
-              <label className="mt-3 block text-xs text-slate-400">Começo<input name="started_at" required type="datetime-local" defaultValue={localInput(new Date(active.started_at))} className="mt-2 block w-full min-w-0 max-w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white [color-scheme:dark]" /></label>
-              <label className="mt-3 block text-xs text-slate-400">Fim<input name="ended_at" required type="datetime-local" defaultValue={localInput(now)} className="mt-2 block w-full min-w-0 max-w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white [color-scheme:dark]" /></label>
+              <div className="mt-3 text-xs text-slate-400">Começo<DateTimeInput name="started_at" required defaultValue={localInput(new Date(active.started_at))} /></div>
+              <div className="mt-3 text-xs text-slate-400">Fim<DateTimeInput name="ended_at" required defaultValue={localInput(now)} /></div>
               <textarea name="notes" placeholder="Observações" defaultValue={active.notes ?? ""} className="mt-3 h-20 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" />
               <button className="mt-3 w-full rounded-xl bg-emerald-600 p-3 font-bold">Finalizar e receber recompensa</button>
             </form>
@@ -60,7 +61,7 @@ async function Content() {
         ) : (
           <form action={startFast} className="mt-5 rounded-2xl border border-slate-700 bg-slate-900 p-4">
             <h2 className="font-bold">Iniciar jejum ativo</h2>
-            <label className="mt-3 block text-xs text-slate-400">Começo<input name="started_at" required type="datetime-local" defaultValue={localInput(now)} className="mt-2 block w-full min-w-0 max-w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white [color-scheme:dark]" /></label>
+            <div className="mt-3 text-xs text-slate-400">Começo<DateTimeInput name="started_at" required defaultValue={localInput(now)} /></div>
             <textarea name="notes" placeholder="Observações" className="mt-3 h-20 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" />
             <button className="mt-3 w-full rounded-xl bg-violet-600 p-3 font-bold">Iniciar contador</button>
           </form>
@@ -68,8 +69,8 @@ async function Content() {
         <form action={finishFast} className="mt-5 rounded-2xl border border-slate-800 bg-slate-950 p-4">
           <details>
             <summary className="cursor-pointer text-sm font-bold text-violet-300">Registrar jejum passado</summary>
-            <label className="mt-3 block text-xs text-slate-400">Começo<input name="started_at" required type="datetime-local" defaultValue={localInput(start)} className="mt-2 block w-full min-w-0 max-w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white [color-scheme:dark]" /></label>
-            <label className="mt-3 block text-xs text-slate-400">Fim<input name="ended_at" required type="datetime-local" defaultValue={localInput(now)} className="mt-2 block w-full min-w-0 max-w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white [color-scheme:dark]" /></label>
+            <div className="mt-3 text-xs text-slate-400">Começo<DateTimeInput name="started_at" required defaultValue={localInput(start)} /></div>
+            <div className="mt-3 text-xs text-slate-400">Fim<DateTimeInput name="ended_at" required defaultValue={localInput(now)} /></div>
             <textarea name="notes" placeholder="Observações" className="mt-3 h-20 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" />
             <button className="mt-3 w-full rounded-xl bg-slate-800 p-3 font-bold">Registrar sessão concluída</button>
           </details>

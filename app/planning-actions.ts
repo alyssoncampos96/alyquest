@@ -38,3 +38,7 @@ export async function saveRoutine(id:string,form:FormData){await invoke('aq_edit
 export async function repeatWorkout(id:string){await invoke('aq_repeat_workout',{p_task_id:id});}
 
 export async function finishFocus(id:string,taskIds:string[],other:string,phase:'focus'|'break',focus:number,rest:number) {return await invoke('aq_complete_focus',{p_session_id:id,p_task_ids:taskIds,p_other:other,p_phase:phase,p_focus_minutes:focus,p_break_minutes:rest}) as string;}
+export async function manageRest(id:string,action:'start'|'pause'|'resume'|'complete'|'cancel',minutes?:number) {
+  if(action==='start'&&(!Number.isInteger(minutes)||!minutes||minutes<1||minutes>240))throw new Error('Escolha de 1 a 240 minutos.');
+  return await invoke('aq_rest_session',{p_session_id:id,p_action:action,p_target_minutes:minutes??null}) as {status:'running'|'paused'|'completed'|'cancelled';seconds:number;coins:number;minutes:number};
+}
