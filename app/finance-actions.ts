@@ -81,6 +81,41 @@ export async function updateFinanceTransaction(form: FormData) {
   revalidatePath("/weekly");
 }
 
+export async function setFinanceTransactionState(form: FormData) {
+  const id = String(form.get("id") ?? "");
+  const status = String(form.get("status") ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(id) || !["planned", "posted", "settled"].includes(status)) throw new Error("Confira o estado do lançamento.");
+  await invoke("aq_finance_set_transaction_state", { p_id: id, p_status: status });
+  revalidatePath("/cards");
+  revalidatePath("/budget");
+  revalidatePath("/weekly");
+}
+
+export async function bulkFinanceCategory(form: FormData) {
+  const ids = form.getAll("ids").map(String);
+  const category = String(form.get("category") ?? "");
+  if (!ids.length || ids.length > 500 || ids.some(id => !/^[0-9a-f-]{36}$/i.test(id)) || !categories.includes(category)) {
+    throw new Error("Selecione os lançamentos e uma categoria.");
+  }
+  await invoke("aq_finance_bulk_category", { p_ids: ids, p_category: category });
+  revalidatePath("/budget");
+  revalidatePath("/weekly");
+}
+
+export async function updateFinanceSeries(form: FormData) {
+  const id = String(form.get("id") ?? "");
+  const title = String(form.get("title") ?? "").trim();
+  const category = String(form.get("category") ?? "");
+  const notes = String(form.get("notes") ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(id) || !title || title.length > 180 || !categories.includes(category) || notes.length > 1000) {
+    throw new Error("Confira os dados da compra parcelada.");
+  }
+  await invoke("aq_finance_update_series", { p_id: id, p_title: title, p_category: category, p_notes: notes });
+  revalidatePath("/cards");
+  revalidatePath("/budget");
+  revalidatePath("/weekly");
+}
+
 export async function saveFinanceRecurring(form: FormData) {
   const title = String(form.get("title") ?? "").trim();
   const amount = parseAmount(form.get("amount"));

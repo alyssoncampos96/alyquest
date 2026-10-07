@@ -5,6 +5,8 @@
 
 body { padding-top: env(safe-area-inset-top, 0px); }
 input[type="date"] { min-width:0; color-scheme:dark; }
+@media(max-width:640px){input,select,textarea{font-size:16px!important}button,a,summary{touch-action:manipulation}}
+:where(button,a,input,select,textarea,summary):focus-visible{outline:2px solid #a78bfa;outline-offset:3px}
 
 .aq-date::-webkit-date-and-time-value{text-align:left;min-height:1.5em}.aq-date::-webkit-calendar-picker-indicator{opacity:0;position:absolute;right:0;width:2.5rem;height:100%}.aq-date{font-size:16px}@keyframes reward-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}.reward-toast{animation:reward-in .22s ease-out}@media(prefers-reduced-motion:reduce){.reward-toast{animation:none}}
 body.theme-default{background:radial-gradient(700px 360px at 50% -100px,rgba(91,33,182,.28),transparent 65%),#080a13}

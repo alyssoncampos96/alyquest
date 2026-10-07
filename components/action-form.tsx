@@ -1,6 +1,6 @@
 "use client";
 import { useRef, useState, startTransition, type ReactNode, type FormEvent } from "react";
-export function ActionForm({ action, children, className, resetOnSuccess = false }: { action: (data: FormData) => Promise<void>; children: ReactNode; className?: string; resetOnSuccess?: boolean }) {
+export function ActionForm({ action, children, className, id, resetOnSuccess = false }: { action: (data: FormData) => Promise<void>; children: ReactNode; className?: string; id?: string; resetOnSuccess?: boolean }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const busy = useRef(false);
@@ -16,5 +16,5 @@ export function ActionForm({ action, children, className, resetOnSuccess = false
     finally { busy.current = false; setPending(false); }
     });
   }
-  return <form onSubmit={submit} className={className} aria-busy={pending}><fieldset disabled={pending} className="min-w-0 disabled:opacity-60">{children}</fieldset>{pending && <p role="status" className="mt-2 text-sm text-slate-400">Salvando...</p>}{error && <p role="alert" className="mt-2 text-sm text-red-300">{error}</p>}</form>;
+  return <form id={id} onSubmit={submit} className={className} aria-busy={pending}><fieldset disabled={pending} className="min-w-0 disabled:opacity-60">{children}</fieldset>{pending && <p role="status" className="mt-2 text-sm text-slate-400">Salvando...</p>}{error && <p role="alert" className="mt-2 text-sm text-red-300">{error}</p>}</form>;
 }
