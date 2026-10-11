@@ -1,3 +1,0 @@
-ISNet int8 model weights: https://huggingface.co/chenjindu/isnet-web
-Licensed under Apache-2.0 by chenjindu. The model is served from AlyQuest and runs in the user's browser.
-ONNX Runtime Web: https://github.com/microsoft/onnxruntime (MIT license).

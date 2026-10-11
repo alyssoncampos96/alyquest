@@ -11,12 +11,12 @@ async function invoke(name:string,args:Record<string,unknown>) {
  refresh();return data;
 }
 async function missionData(form:FormData) {
- const title=String(form.get('title')??'').trim(),category=cleanCategory(form.get('category')??'Pessoal'),priority=String(form.get('priority')??'medium');
+ const title=String(form.get('title')??'').trim(),description=String(form.get('description')??'').trim(),category=cleanCategory(form.get('category')??'Pessoal'),priority=String(form.get('priority')??'medium');
  const hours=Number(form.get('estimated_hours')); const kind=String(form.get('kind')??'task');
- if(!title||title.length>200||!['low','medium','high'].includes(priority)||!Number.isFinite(hours)||hours<=0||hours>1000||!['single','task','workout'].includes(kind))throw new Error('Confira o título, categoria e duração.');
+ if(!title||title.length>200||description.length>4000||!['low','medium','high'].includes(priority)||!Number.isFinite(hours)||hours<=0||hours>1000||!['single','task','workout'].includes(kind))throw new Error('Confira o título, descrição, categoria e duração.');
  const rule=parseRule(JSON.parse(String(form.get('rule')??'null')));
  const due=String(form.get('due_date')??'');if(due&&!/^\d{4}-\d{2}-\d{2}$/.test(due))throw new Error('Prazo inválido.');
- return {p_data:{title,category,priority,estimated_hours:hours,boss_id:form.get('boss_id')||null,due_date:due||null,kind,...(form.has('steps')?{steps:parseSteps(JSON.parse(String(form.get('steps')))).map(s=>({...s,done:false,actual:''}))}:{})},p_rule:rule};
+ return {p_data:{title,description,category,priority,estimated_hours:hours,boss_id:form.get('boss_id')||null,due_date:due||null,kind,...(form.has('steps')?{steps:parseSteps(JSON.parse(String(form.get('steps')))).map(s=>({...s,done:false,actual:''}))}:{})},p_rule:rule};
 }
 export async function saveSteps(id:string,steps:unknown,revision=0) { return await invoke('aq_save_steps_v2',{p_task_id:id,p_steps:parseSteps(steps),p_revision:revision}) as {revision:number;xp:number;coins:number}; }
 export async function saveModule(id:string|null,name:string,steps:unknown) {

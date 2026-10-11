@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     p_priority: String(body.priority ?? "medium"),
     p_estimated_hours: Number(body.estimated_hours ?? 1),
     p_due_date: body.due_date ? String(body.due_date) : null,
-    p_notes: String(body.notes ?? "").slice(0, 1000),
+    p_notes: String(body.notes ?? "").slice(0, 4000),
   });
   if (error) return NextResponse.json({ error: error.code === "P0001" ? error.message : "Não foi possível criar a missão." }, { status: error.code === "P0001" ? 400 : 500 });
   return NextResponse.json({ ok: true, ...data });
