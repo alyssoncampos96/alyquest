@@ -15,6 +15,7 @@ const mainItems = [
 ];
 
 const moreItems = [
+  { href: "/wardrobe", icon: "👕", label: "Roupas" },
   { href: "/weekly", icon: "📊", label: "Semana" },
   { href: "/journeys", icon: "🗺️", label: "Jornadas" },
   { href: "/daily", icon: "✨", label: "Diárias" },
