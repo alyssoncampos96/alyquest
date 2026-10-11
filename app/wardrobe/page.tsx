@@ -13,5 +13,5 @@ export default async function Page() {
   const paths = [...new Set(items.flatMap(item => [item.processed_path, item.photo_path].filter((path): path is string => !!path)))];
   const { data: urls } = paths.length ? await supabase.storage.from('aq-wardrobe').createSignedUrls(paths, 3600) : { data: [] };
   const signed = new Map((urls ?? []).map((entry, index) => [paths[index], entry.signedUrl]));
-  return <WardrobeScreen userId={user.id} initialItems={items.map(item => ({ ...item, image_url: signed.get(item.prefer_original ? item.photo_path : item.processed_path ?? item.photo_path) ?? signed.get(item.photo_path) ?? '' }))} aiEnabled={Boolean(process.env.WARDROBE_OPENAI_API_KEY)}/>;
+  return <WardrobeScreen userId={user.id} initialItems={items.map(item => ({ ...item, image_url: signed.get(item.prefer_original ? item.photo_path : item.processed_path ?? item.photo_path) ?? signed.get(item.photo_path) ?? '' }))}/>;
 }
